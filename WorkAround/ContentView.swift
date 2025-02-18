@@ -5,6 +5,7 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var isLoading = true
     @State private var showLoadingView = true
+    @State private var showProfileSheet = false
 
     private let allItems: [Item] = [
         Item(timestamp: Date(), title: "Plan Project", details: "Outline all tasks for the WorkAround app."),
@@ -17,29 +18,9 @@ struct ContentView: View {
     
     var body: some View {
         ZStack {
-            TabView {
-                homeTab()
-                    .tabItem {
-                        Label("Home", systemImage: "house")
-                    }
-                
-                privateTab()
-                    .tabItem {
-                        Label("Private", systemImage: "lock")
-                    }
-                
-                publicTab()
-                    .tabItem {
-                        Label("Public", systemImage: "globe")
-                    }
-                
-                optionsTab()
-                    .tabItem {
-                        Label("Options", systemImage: "gearshape")
-                    }
-            }
-            .opacity(showLoadingView ? 0 : 1)
-            .animation(.easeIn(duration: 0.5), value: showLoadingView)
+            homeTab()
+                .opacity(showLoadingView ? 0 : 1)
+                .animation(.easeIn(duration: 0.5), value: showLoadingView)
             
             if showLoadingView {
                 NaturalLoadingView(isLoading: $isLoading, onAnimationEnd: {
@@ -56,26 +37,45 @@ struct ContentView: View {
         }
     }
     
-
+    // MARK: - Home Content
 
     private func homeTab() -> some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     ForEach(Array(filteredItems.enumerated()), id: \.element.timestamp) { index, item in
-                        ItemCardView(item: item, index: index)
+                        NavigationLink(destination: ItemDetailView(item: item)) {
+                            ItemCardView(item: item, index: index)
+                        }
                     }
                 }
                 .padding(.vertical)
             }
             .navigationTitle("Home")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showProfileSheet = true
+                    }) {
+                        Image(systemName: "person.circle")
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic)) {
                 ForEach(searchSuggestions, id: \.self) { suggestion in
                     Text(suggestion).searchCompletion(suggestion)
                 }
             }
+            .sheet(isPresented: $showProfileSheet) {
+                ProfileView()
+            }
         }
     }
+    
+    // MARK: - Filtering & Suggestions
     
     private var filteredItems: [Item] {
         if searchText.isEmpty {
@@ -88,20 +88,9 @@ struct ContentView: View {
     private var searchSuggestions: [String] {
         allItems.map { $0.title }.filter { $0.localizedCaseInsensitiveContains(searchText) }
     }
-    
-    private func privateTab() -> some View {
-        Text("Private Content")
-    }
-    
-    private func publicTab() -> some View {
-        Text("Public Content")
-    }
-    
-    private func optionsTab() -> some View {
-        Text("Options Content")
-    }
 }
 
+// MARK: - Loading View
 struct NaturalLoadingView: View {
     @Binding var isLoading: Bool
     var onAnimationEnd: () -> Void
@@ -140,10 +129,10 @@ struct NaturalLoadingView: View {
     }
 }
 
+// MARK: - Item Card & Detail Views
 struct ItemCardView: View {
     let item: Item
     let index: Int
-    @State private var isVisible: Bool = false
 
     var body: some View {
         HStack(spacing: 16) {
@@ -178,8 +167,31 @@ struct ItemCardView: View {
     }
 }
 
-struct ContentView_Previews: PreviewProvider {
-    static var previews: some View {
-        ContentView()
+struct ItemDetailView: View {
+    let item: Item
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text(item.title)
+                .font(.title)
+                .bold()
+            
+            Text(item.details)
+                .font(.body)
+        }
+        .padding()
+        .navigationTitle(item.title)
+    }
+}
+
+struct ProfileView: View {
+    var body: some View {
+        VStack {
+            Text("Profile")
+                .font(.largeTitle)
+                .padding()
+            Spacer()
+        }
+        .navigationTitle("Profile")
     }
 }
