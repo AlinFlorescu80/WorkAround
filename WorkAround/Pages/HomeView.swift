@@ -91,3 +91,7 @@ struct HomeView: View {
         allItems.map { $0.title }.filter { $0.localizedCaseInsensitiveContains(searchText) }
     }
 }
+
+#Preview {
+    HomeView()
+}
