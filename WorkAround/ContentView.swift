@@ -1,6 +1,8 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - Main Content & Navigation
+
 struct ContentView: View {
     @State private var searchText = ""
     @State private var isLoading = true
@@ -91,6 +93,7 @@ struct ContentView: View {
 }
 
 // MARK: - Loading View
+
 struct NaturalLoadingView: View {
     @Binding var isLoading: Bool
     var onAnimationEnd: () -> Void
@@ -130,6 +133,7 @@ struct NaturalLoadingView: View {
 }
 
 // MARK: - Item Card & Detail Views
+
 struct ItemCardView: View {
     let item: Item
     let index: Int
@@ -167,20 +171,13 @@ struct ItemCardView: View {
     }
 }
 
+
 struct ItemDetailView: View {
     let item: Item
-
+    
     var body: some View {
-        VStack(spacing: 16) {
-            Text(item.title)
-                .font(.title)
-                .bold()
-            
-            Text(item.details)
-                .font(.body)
-        }
-        .padding()
-        .navigationTitle(item.title)
+        KanbanBoardView()
+            .navigationTitle("Kanban Board")
     }
 }
 
@@ -193,5 +190,202 @@ struct ProfileView: View {
             Spacer()
         }
         .navigationTitle("Profile")
+    }
+}
+
+// MARK: - Kanban Board Models & Views
+
+struct KanbanColumn: Identifiable {
+    let id = UUID()
+    var title: String
+    var cards: [KanbanCard]
+}
+
+struct KanbanCard: Identifiable, Equatable {
+    let id: UUID = UUID()
+    var title: String
+    var details: String
+}
+
+struct KanbanCardView: View {
+    @Binding var card: KanbanCard
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TextField("Title", text: $card.title)
+                .font(.headline)
+                .foregroundColor(.primary)
+                .textFieldStyle(PlainTextFieldStyle())
+            TextField("Details", text: $card.details)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .textFieldStyle(PlainTextFieldStyle())
+        }
+        .padding()
+        .background(Color.white)
+        .cornerRadius(8)
+        .shadow(radius: 2)
+    }
+}
+
+struct KanbanBoardView: View {
+    @State private var columns: [KanbanColumn] = [
+        KanbanColumn(title: "To Do", cards: [
+            KanbanCard(title: "Task 1", details: "Define requirements"),
+            KanbanCard(title: "Task 2", details: "Set up project")
+        ]),
+        KanbanColumn(title: "In Progress", cards: [
+            KanbanCard(title: "Task 3", details: "Design UI")
+        ]),
+        KanbanColumn(title: "Done", cards: [])
+    ]
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 16) {
+                ForEach($columns) { $column in
+                    VStack(spacing: 8) {
+                        TextField("Column Title", text: $column.title)
+                            .font(.headline)
+                            .padding(.vertical, 8)
+                            .multilineTextAlignment(.center)
+                        
+                        ScrollView {
+                            VStack(spacing: 8) {
+                                ForEach($column.cards) { $card in
+                                    KanbanCardView(card: $card)
+                                        .onDrag {
+                                            NSItemProvider(object: card.id.uuidString as NSString)
+                                        }
+                                        .onDrop(of: [.text], delegate: CardDropDelegate(targetCard: card, targetColumn: $column, allColumns: $columns))
+                                }
+                            }
+                            .padding()
+                            
+                        }
+                        .frame( minWidth: 250, maxHeight: .infinity)
+                        .background(Color(UIColor.secondarySystemBackground))
+                        .cornerRadius(8)
+                        .onDrop(of: [.text], delegate: ColumnDropDelegate(targetColumn: $column, allColumns: $columns))
+                        
+                        Button(action: {
+                            let newCard = KanbanCard(title: "New Task", details: "Task details")
+                            withAnimation {
+                                column.cards.append(newCard)
+                            }
+                        }) {
+                            HStack {
+                                Image(systemName: "plus.circle")
+                                Text("Add Card")
+                            }
+                            .padding(8)
+                        }
+                    }
+                    .frame(width: 250)
+                    .padding()
+                    .background(Color(UIColor.systemBackground))
+                    .cornerRadius(8)
+                    .shadow(radius: 2)
+                }
+                
+                Button(action: {
+                    withAnimation {
+                        columns.append(KanbanColumn(title: "New Column", cards: []))
+                    }
+                }) {
+                    VStack {
+                        Image(systemName: "plus.circle.fill")
+                            .resizable()
+                            .frame(width: 50, height: 50)
+                        Text("Add Column")
+                            .font(.headline)
+                    }
+                    .frame(width: 250, height: 400)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .shadow(radius: 2)
+                }
+            }
+            .padding()
+        }
+    }
+}
+
+struct CardDropDelegate: DropDelegate {
+    let targetCard: KanbanCard
+    @Binding var targetColumn: KanbanColumn
+    @Binding var allColumns: [KanbanColumn]
+    
+    func performDrop(info: DropInfo) -> Bool {
+        handleDrop(info: info)
+    }
+    
+    private func handleDrop(info: DropInfo) -> Bool {
+        guard let itemProvider = info.itemProviders(for: [.text]).first else {
+            return false
+        }
+        itemProvider.loadItem(forTypeIdentifier: "public.text", options: nil) { data, error in
+            DispatchQueue.main.async {
+                if let data = data as? Data,
+                   let idString = String(data: data, encoding: .utf8),
+                   let draggedCardID = UUID(uuidString: idString) {
+                    moveCard(with: draggedCardID)
+                }
+            }
+        }
+        return true
+    }
+    
+    private func moveCard(with draggedCardID: UUID) {
+        for i in allColumns.indices {
+            if let removeIndex = allColumns[i].cards.firstIndex(where: { $0.id == draggedCardID }) {
+                let movingCard = allColumns[i].cards.remove(at: removeIndex)
+                if let targetIndex = targetColumn.cards.firstIndex(where: { $0.id == targetCard.id }) {
+                    targetColumn.cards.insert(movingCard, at: targetIndex)
+                } else {
+                    targetColumn.cards.append(movingCard)
+                }
+                break
+            }
+        }
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        return DropProposal(operation: .move)
+    }
+}
+
+struct ColumnDropDelegate: DropDelegate {
+    @Binding var targetColumn: KanbanColumn
+    @Binding var allColumns: [KanbanColumn]
+    
+    func performDrop(info: DropInfo) -> Bool {
+        guard let itemProvider = info.itemProviders(for: [.text]).first else {
+            return false
+        }
+        itemProvider.loadItem(forTypeIdentifier: "public.text", options: nil) { data, error in
+            DispatchQueue.main.async {
+                if let data = data as? Data,
+                   let idString = String(data: data, encoding: .utf8),
+                   let draggedCardID = UUID(uuidString: idString) {
+                    moveCard(with: draggedCardID)
+                }
+            }
+        }
+        return true
+    }
+    
+    private func moveCard(with draggedCardID: UUID) {
+        for i in allColumns.indices {
+            if let removeIndex = allColumns[i].cards.firstIndex(where: { $0.id == draggedCardID }) {
+                let movingCard = allColumns[i].cards.remove(at: removeIndex)
+                targetColumn.cards.append(movingCard)
+                break
+            }
+        }
+    }
+    
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        return DropProposal(operation: .move)
     }
 }
