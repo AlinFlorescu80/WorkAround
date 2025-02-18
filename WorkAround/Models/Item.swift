@@ -2,8 +2,9 @@
 //  Item.swift
 //  WorkAround
 //
-//  Created by Alin Florescu on 06.10.2024.
+//  Created by Alin Florescu on 18.02.2025.
 //
+
 
 import Foundation
 import SwiftData
@@ -12,7 +13,7 @@ import SwiftData
 final class Item {
     var timestamp: Date
     var title: String
-    var details: String  // Renamed from 'description' to 'details'
+    var details: String  
     
     init(timestamp: Date, title: String, details: String) {
         self.timestamp = timestamp

@@ -1,23 +1,13 @@
-//
-//  WorkAroundApp.swift
-//  WorkAround
-//
-//  Created by Alin Florescu on 06.10.2024.
-//
-
 import SwiftUI
 import SwiftData
 
 @main
 struct WorkAroundApp: App {
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
+        let schema = Schema([ Item.self ])
+        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -25,7 +15,7 @@ struct WorkAroundApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            HomeView()
         }
         .modelContainer(sharedModelContainer)
     }
