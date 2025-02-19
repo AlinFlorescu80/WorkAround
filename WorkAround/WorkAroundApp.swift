@@ -26,7 +26,7 @@ struct WorkAroundApp: App {
 
     var body: some Scene {
         WindowGroup {
-            LoginView()
+            AuthParentView()
         }
         .modelContainer(sharedModelContainer)
     }
