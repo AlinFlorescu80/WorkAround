@@ -1,76 +1,97 @@
 import SwiftUI
 
 struct AuthenticateView: View {
-    var namespace: Namespace.ID
-    var onSignIn: () -> Void
-    var imageWidth: CGFloat
-
+    @State private var showInitialView: Bool = true
+    @State private var email: String = ""
+    @State private var password: String = ""
     var body: some View {
-        VStack(spacing: 20) {
+        
+        // MARK: Initial view
             Spacer()
             
             Image("WorkAroundIcon")
                 .resizable()
-                .scaledToFit()
-                .matchedGeometryEffect(id: "logo", in: namespace)
-                .frame(maxWidth: imageWidth)
-                .padding()
+                .frame(width: 250, height: 250)
             
-            VStack(spacing: 16) {
-                Button(action: {
-                    onSignIn()
-                }) {
-                    Text("Sign In")
-                        .font(.title2.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.blue)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                }
+            Spacer()
+        
+        if showInitialView
+        {
+            
+            Button("Sign in")
+            {
+                showInitialView.toggle()
+            }
+            .frame(width: 250, height: 50)
+            .background(Color.blue)
+            .foregroundColor(.white)
+            .cornerRadius(8)
+            .padding()
+            
+            
+            Button("Sign Up")
+            {
                 
-                Button(action: {
-                }) {
-                    Text("Sign Up")
-                        .font(.title2.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.white)
-                        .foregroundColor(Color.blue)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.blue, lineWidth: 2)
-                        )
-                        .cornerRadius(12)
-                }
             }
-            .frame(width: imageWidth)
+            .frame(width: 250, height: 50)
+            .foregroundColor(.blue)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+            .padding(.bottom)
             
-            Button(action: {
-            }) {
-                Text("Continue without an account")
-                    .font(.body)
-                    .foregroundColor(.gray)
+            
+            Button ("Continue without an account...")
+            {
+                
             }
-            .padding(.top, 10)
             
             Spacer()
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            LinearGradient(
-                gradient: Gradient(colors: [Color.white, Color.blue.opacity(0.1)]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
+        
+        else {
+            
+            
+            TextField("Mail", text: $email)
+                .padding()
+            
+            SecureField("Password", text: $password)
+                .padding()
+            
+            
+            
+            Button("Sign in with Google")
+            {
+                showInitialView.toggle()
+            }
+            .frame(width: 250, height: 50)
+            .foregroundColor(.blue)
+
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+            .padding()
+            
+            
+            Button("🍏 Sign in WIth Apple")
+            {
+                showInitialView.toggle()
+
+            }
+            .frame(width: 250, height: 50)
+            .foregroundColor(.blue)
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+            .padding(.bottom)
+            
+            Spacer()
+            
+            
+        }
+        
+        
+    
+        
+        
     }
 }
 
-struct AuthenticateView_Previews: PreviewProvider {
-    static var previews: some View {
-        AuthenticateView(namespace: Namespace().wrappedValue, onSignIn: {}, imageWidth: 300)
-    }
+
+#Preview {
+    AuthenticateView()
 }
