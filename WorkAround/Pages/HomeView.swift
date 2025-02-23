@@ -42,6 +42,7 @@ struct HomeView: View {
                     isLoading = false
                 }
             }
+           
         }
     }
     
@@ -58,6 +59,7 @@ struct HomeView: View {
                 .padding(.vertical)
             }
             .navigationTitle("Home")
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showProfileSheet = true }) {
@@ -91,7 +93,7 @@ struct HomeView: View {
         allItems.map { $0.title }.filter { $0.localizedCaseInsensitiveContains(searchText) }
     }
 }
-
+ 
 #Preview {
     HomeView()
 }
