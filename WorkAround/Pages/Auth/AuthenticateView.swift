@@ -2,10 +2,14 @@ import SwiftUI
 import FirebaseAuth
 
 struct AuthenticateView: View {
+    @EnvironmentObject var authManager: AuthManager
+    
     @State private var showInitialView: Bool = true
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var navigateToHome: Bool = false
+    @State private var showLoadingView : Bool = true
+
     var body: some View {
         
         NavigationStack {
@@ -54,21 +58,15 @@ struct AuthenticateView: View {
                 }
                 
                 else {
-                    
-                    
-                    
                     TextField("Mail", text: $email)
                         .frame(width: 250)
                         .keyboardType(.emailAddress)
                         .textFieldStyle(.roundedBorder)
                         .autocapitalization(.none)
                     
-                    
-                    
                     SecureField("Password", text: $password)
                         .frame(width: 250)
                         .textFieldStyle(.roundedBorder)
-                    
                     
                     Button("Sign in with Email")
                     {
@@ -83,9 +81,11 @@ struct AuthenticateView: View {
                             else
                             {
                                 print("User signed in successfully.")
+                                showLoadingView = false
                                 withAnimation(.bouncy)
                                 {
                                     navigateToHome = true
+                                    authManager.isSignedIn = true
                                 }
                             }
                         }
@@ -155,7 +155,7 @@ struct AuthenticateView: View {
             
             .navigationDestination(isPresented: $navigateToHome)
             {
-                HomeView()
+                HomeView(showLoadingView: false)
             }
         }
         
@@ -164,6 +164,6 @@ struct AuthenticateView: View {
 }
 
 
-#Preview {
-    AuthenticateView()
-}
+//#Preview {
+//    AuthenticateView()
+//}

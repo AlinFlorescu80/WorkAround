@@ -13,6 +13,8 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 @main
 struct WorkAroundApp: App {
+    @StateObject var authManager = AuthManager()
+    
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([ Item.self ])
@@ -27,6 +29,7 @@ struct WorkAroundApp: App {
     var body: some Scene {
         WindowGroup {
             AuthenticateView()
+                .environmentObject(authManager)
         }
         .modelContainer(sharedModelContainer)
     }
