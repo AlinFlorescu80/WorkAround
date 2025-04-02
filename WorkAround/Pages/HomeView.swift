@@ -9,12 +9,14 @@ import SwiftUI
 import SwiftData
 
 struct HomeView: View {
+    @EnvironmentObject var authManager: AuthManager
+    
     @State private var searchText = ""
     @State private var isLoading = true
-    @State private var showLoadingView = true
     @State private var showProfileSheet = false
+    @State private var navigateToAuthenticate = false
+    @State var showLoadingView: Bool
 
-    // Example data (in a real app, you’d load this from your model/persistence)
     private let allItems: [Item] = [
         Item(timestamp: Date(), title: "Plan Project", details: "Outline all tasks for the WorkAround app."),
         Item(timestamp: Date().addingTimeInterval(-86400), title: "Design UI", details: "Sketch the Kanban interface."),
@@ -47,34 +49,51 @@ struct HomeView: View {
     
     private func homeContent() -> some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    ForEach(Array(filteredItems.enumerated()), id: \.element.timestamp) { index, item in
-                        NavigationLink(destination: ItemDetailView(item: item)) {
-                            ItemCardView(item: item, index: index)
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        ForEach(Array(filteredItems.enumerated()), id: \.element.timestamp) { index, item in
+                            NavigationLink(destination: ItemDetailView(item: item)) {
+                                ItemCardView(item: item, index: index)
+                            }
+                        }
+                    }
+                    .padding(.vertical)
+                }
+                .navigationTitle("Home")
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItemGroup(placement: .navigationBarTrailing) {
+                        if !authManager.isSignedIn {
+                            Button("Sign In") {
+                                navigateToAuthenticate = true
+                            }
+                        }
+                        Button(action: { showProfileSheet = true }) {
+                            Image(systemName: "person.circle")
+                                .resizable()
+                                .frame(width: 40, height: 40)
+                                .foregroundColor(.primary)
                         }
                     }
                 }
-                .padding(.vertical)
-            }
-            .navigationTitle("Home")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showProfileSheet = true }) {
-                        Image(systemName: "person.circle")
-                            .resizable()
-                            .frame(width: 30, height: 30)
-                            .foregroundColor(.primary)
+                .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic)) {
+                    ForEach(searchSuggestions, id: \.self) { suggestion in
+                        Text(suggestion).searchCompletion(suggestion)
                     }
                 }
-            }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .automatic)) {
-                ForEach(searchSuggestions, id: \.self) { suggestion in
-                    Text(suggestion).searchCompletion(suggestion)
+                .sheet(isPresented: $showProfileSheet) {
+                    ProfileView()
                 }
-            }
-            .sheet(isPresented: $showProfileSheet) {
-                ProfileView()
+                
+                // Hidden NavigationLink for programmatic navigation
+                NavigationLink(
+                    destination: AuthenticateView().environmentObject(authManager),
+                    isActive: $navigateToAuthenticate
+                ) {
+                    EmptyView()
+                }
+                .hidden()
             }
         }
     }
@@ -90,4 +109,8 @@ struct HomeView: View {
     private var searchSuggestions: [String] {
         allItems.map { $0.title }.filter { $0.localizedCaseInsensitiveContains(searchText) }
     }
+}
+ 
+#Preview {
+    HomeView(showLoadingView: true)
 }
