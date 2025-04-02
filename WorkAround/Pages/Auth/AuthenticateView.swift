@@ -122,8 +122,10 @@ struct AuthenticateView: View {
                                     .resizable()
                                     .scaledToFit()
                             }
+                            .background(Color.white)
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
                     }
-                    .buttonStyle(.bordered)
+//                    .buttonStyle(.bordered)
                     
                     
 //                    Button("Sign in with Google")
