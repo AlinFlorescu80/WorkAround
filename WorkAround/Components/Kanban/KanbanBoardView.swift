@@ -1,28 +1,19 @@
-//
-//  KanbanBoardView.swift
-//  WorkAround
-//
-//  Created by Alin Florescu on 18.02.2025.
-//
+    //
+    //  KanbanBoardView.swift
+    //  WorkAround
+    //
+    //  Created by Alin Florescu on 18.02.2025.
+    //
 
 import SwiftUI
 
 struct KanbanBoardView: View {
-    @State private var columns: [KanbanColumn] = [
-        KanbanColumn(title: "To Do", cards: [
-            KanbanCard(title: "Task 1", details: "Define requirements"),
-            KanbanCard(title: "Task 2", details: "Set up project")
-        ]),
-        KanbanColumn(title: "In Progress", cards: [
-            KanbanCard(title: "Task 3", details: "Design UI")
-        ]),
-        KanbanColumn(title: "Done", cards: [])
-    ]
+    @StateObject private var viewModel = KanbanBoardViewModel()
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 16) {
-                ForEach($columns) { $column in
+                ForEach($viewModel.columns) { $column in
                     VStack(spacing: 8) {
                         TextField("Column Title", text: $column.title)
                             .font(.headline)
@@ -33,10 +24,13 @@ struct KanbanBoardView: View {
                             VStack(spacing: 8) {
                                 ForEach($column.cards) { $card in
                                     KanbanCardView(card: $card)
-                                        .onDrag {
-                                            NSItemProvider(object: card.id.uuidString as NSString)
-                                        }
-                                        .onDrop(of: [.text], delegate: CardDropDelegate(targetCard: card, targetColumn: $column, allColumns: $columns))
+//                                        .onDrag {
+//                                            NSItemProvider(object: card.id.uuidString as NSString)
+//                                        }
+//                                        .onDrop(of: [.text], delegate: CardDropDelegate(targetCard: card, targetColumn: $column, allColumns: $viewModel.columns))
+//                                        .onChange(of: card) { _ in
+//                                            viewModel.saveColumn(column)
+//                                        }
                                 }
                             }
                             .padding()
@@ -44,12 +38,13 @@ struct KanbanBoardView: View {
                         .frame(minWidth: 250, maxHeight: .infinity)
                         .background(Color(UIColor.secondarySystemBackground))
                         .cornerRadius(8)
-                        .onDrop(of: [.text], delegate: ColumnDropDelegate(targetColumn: $column, allColumns: $columns))
+                        .onDrop(of: [.text], delegate: ColumnDropDelegate(targetColumn: $column, allColumns: $viewModel.columns))
                         
                         Button(action: {
                             let newCard = KanbanCard(title: "New Task", details: "Task details")
                             withAnimation {
                                 column.cards.append(newCard)
+                                viewModel.saveColumn(column)
                             }
                         }) {
                             HStack {
@@ -67,8 +62,10 @@ struct KanbanBoardView: View {
                 }
                 
                 Button(action: {
+                    let newColumn = KanbanColumn(title: "New Column", cards: [])
                     withAnimation {
-                        columns.append(KanbanColumn(title: "New Column", cards: []))
+                        viewModel.columns.append(newColumn)
+                        viewModel.saveColumn(newColumn)
                     }
                 }) {
                     VStack {
@@ -88,3 +85,10 @@ struct KanbanBoardView: View {
         }
     }
 }
+#if DEBUG
+struct KanbanBoardView_Previews: PreviewProvider {
+    static var previews: some View {
+        KanbanBoardView()
+    }
+}
+#endif
