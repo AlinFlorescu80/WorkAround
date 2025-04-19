@@ -1,9 +1,9 @@
-//
-//  KanbanBoardViewModel.swift
-//  WorkAround
-//
-//  Created by Alin Florescu on 05.04.2025.
-//
+    //
+    //  KanbanBoardViewModel.swift
+    //  WorkAround
+    //
+    //  Created by Alin Florescu on 05.04.2025.
+    //
 
 import Foundation
 import Firebase
@@ -32,16 +32,16 @@ class KanbanBoardViewModel: ObservableObject {
     
     func saveColumn(_ column: KanbanColumn) {
         print("📝 Attempting to save column titled: \(column.title)")
-
+        
         var columnToSave = column
         
             // If column has no ID, generate a new document ID and assign it
-        if columnToSave.id == nil {
+        if columnToSave.firestoreId == nil {
             let newDocRef = db.collection("boards").document(boardID).collection("columns").document()
-            columnToSave.id = newDocRef.documentID
+            columnToSave.firestoreId = newDocRef.documentID
         }
         
-        guard let columnID = columnToSave.id else { return }
+        guard let columnID = columnToSave.firestoreId else { return }
         
         do {
             try db.collection("boards").document(boardID)

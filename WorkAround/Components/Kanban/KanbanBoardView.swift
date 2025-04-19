@@ -22,15 +22,15 @@ struct KanbanBoardView: View {
                         
                         ScrollView {
                             VStack(spacing: 8) {
-                                ForEach($column.cards) { $card in
-                                    KanbanCardView(card: $card)
-//                                        .onDrag {
-//                                            NSItemProvider(object: card.id.uuidString as NSString)
-//                                        }
-//                                        .onDrop(of: [.text], delegate: CardDropDelegate(targetCard: card, targetColumn: $column, allColumns: $viewModel.columns))
-//                                        .onChange(of: card) { _ in
-//                                            viewModel.saveColumn(column)
-//                                        }
+                                ForEach(column.cards.indices, id: \.self) { idx in
+                                    KanbanCardView(card: $column.cards[idx])
+                                        //                                        .onDrag {
+                                        //                                            NSItemProvider(object: card.id.uuidString as NSString)
+                                        //                                        }
+                                        //                                        .onDrop(of: [.text], delegate: CardDropDelegate(targetCard: card, targetColumn: $column, allColumns: $viewModel.columns))
+                                        //                                        .onChange(of: card) { _ in
+                                        //                                            viewModel.saveColumn(column)
+                                        //                                        }
                                 }
                             }
                             .padding()
@@ -65,7 +65,6 @@ struct KanbanBoardView: View {
                     let newColumn = KanbanColumn(title: "New Column", cards: [])
                     withAnimation {
                         viewModel.columns.append(newColumn)
-                        viewModel.saveColumn(newColumn)
                     }
                 }) {
                     VStack {
