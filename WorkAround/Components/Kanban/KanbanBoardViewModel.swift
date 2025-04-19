@@ -50,7 +50,7 @@ class KanbanBoardViewModel: ObservableObject {
         
             // If the column hasn’t been pushed yet, give it a Firestore ID.
         if columnToSave.firestoreId == nil {
-            let newDocRef            = db.collection("boards")
+            let newDocRef = db.collection("boards")
                 .document(boardID)
                 .collection("columns")
                 .document()

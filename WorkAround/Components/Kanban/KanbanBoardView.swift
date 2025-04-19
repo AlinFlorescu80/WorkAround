@@ -44,7 +44,7 @@ struct KanbanBoardView: View {
                             let newCard = KanbanCard(title: "New Task", details: "Task details")
                             withAnimation {
                                 column.cards.append(newCard)
-                                viewModel.saveColumn(column)
+                                    // viewModel.saveColumn(column)
                             }
                         }) {
                             HStack {
@@ -82,6 +82,11 @@ struct KanbanBoardView: View {
                 }
             }
             .padding()
+        }
+        .onDisappear {
+            for col in viewModel.columns {
+                viewModel.saveColumn(col)
+            }
         }
     }
 }
