@@ -62,7 +62,8 @@ struct KanbanBoardView: View {
                 }
                 
                 Button(action: {
-                    let newColumn = KanbanColumn(title: "New Column", cards: [])
+                    let nextOrder = (viewModel.columns.map(\.order).max() ?? -1) + 1
+                    let newColumn = KanbanColumn(title: "New Column", cards: [], order: nextOrder)
                     withAnimation {
                         viewModel.columns.append(newColumn)
                     }

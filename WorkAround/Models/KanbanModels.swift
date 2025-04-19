@@ -24,7 +24,8 @@ struct KanbanColumn: Identifiable, Codable {
 
     var title: String
     var cards: [KanbanCard]
-    
+        /// Position of the column in the board (lower = further left).
+    var order: Int    
         /// SwiftUI uses this as the stable identifier.
     var id: String { firestoreId ?? localId }
 }
