@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct KanbanBoardView: View {
-    @StateObject private var viewModel = KanbanBoardViewModel()
+    @StateObject private var viewModel: KanbanBoardViewModel
     @State private var showingInviteSheet = false
+    
+    init(boardID: String) {
+        _viewModel = StateObject(wrappedValue: KanbanBoardViewModel(boardID: boardID))
+    }
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -99,7 +103,7 @@ struct KanbanBoardView: View {
 #if DEBUG
 struct KanbanBoardView_Previews: PreviewProvider {
     static var previews: some View {
-        KanbanBoardView()
+        KanbanBoardView(boardID: "preview")
     }
 }
 #endif

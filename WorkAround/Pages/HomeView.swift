@@ -6,36 +6,34 @@
     //
 
 import SwiftUI
-import SwiftData
 import Firebase
 import FirebaseAuth
 import FirebaseFirestore
+import PhotosUI
+import FirebaseStorage
+
+    /// Simple model for listing boards with title and optional photo.
+private struct BoardInfo: Identifiable {
+    let id: String
+    let title: String
+    let photoURL: String?
+}
 
 struct HomeView: View {
         // MARK: – Environment
     @EnvironmentObject var authManager: AuthManager
     
         // MARK: – UI State
-    @State private var searchText        = ""
-    @State private var isLoading         = true
-    @State private var showProfileSheet  = false
-    @State private var navigateToAuth    = false
+    @State private var searchText           = ""
+    @State private var isLoading            = true
+    @State private var showProfileSheet     = false
+    @State private var navigateToAuth       = false
     @State var showLoadingView: Bool
+    @State private var showingNewBoardSheet = false
     
         // MARK: – Board Data
-    @State private var boards: [String] = []          // boardIDs owned/invited
-    @State private var navBoardID: String? = nil      // triggers navigation
+    @State private var boards: [BoardInfo] = []      // user’s boards with metadata
     private let db = Firestore.firestore()
-    
-        // MARK: – Demo Items (unchanged)
-    private let allItems: [Item] = [
-        Item(timestamp: Date(),                      title: "Plan Project",        details: "Outline all tasks for the WorkAround app."),
-        Item(timestamp: Date().addingTimeInterval(-1*86400),  title: "Design UI",          details: "Sketch the Kanban interface."),
-        Item(timestamp: Date().addingTimeInterval(-2*86400),  title: "Implement Features", details: "Code the drag‑and‑drop feature."),
-        Item(timestamp: Date().addingTimeInterval(-3*86400),  title: "Test App",           details: "Perform thorough testing."),
-        Item(timestamp: Date().addingTimeInterval(-4*86400),  title: "Deploy App",         details: "Deploy the app to production."),
-        Item(timestamp: Date().addingTimeInterval(-5*86400),  title: "Collect Feedback",   details: "Gather user feedback for improvements.")
-    ]
     
         // MARK: – Body
     var body: some View {
@@ -59,24 +57,15 @@ struct HomeView: View {
         }
     }
     
-        // MARK: – Dashboard (boards + recent items)
+        // MARK: – Dashboard (boards)
     private var dashboard: some View {
         NavigationStack {
             List {
                     // Boards section
                 Section("My Boards") {
-                    ForEach(boards, id: \.self) { id in
-                        NavigationLink(value: id) {
-                            Text("Board \(id.prefix(6))")
-                        }
-                    }
-                }
-                
-                    // Your existing demo items
-                Section("Recent Items") {
-                    ForEach(Array(filteredItems.enumerated()), id: \.element.timestamp) { idx, item in
-                        NavigationLink(destination: ItemDetailView(item: item)) {
-                            ItemCardView(item: item, index: idx)
+                    ForEach(filteredBoards) { board in
+                        NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
+                            Text(board.title)
                         }
                     }
                 }
@@ -87,7 +76,7 @@ struct HomeView: View {
                     // Leading: create board
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
-                        Task { await createBoard() }
+                        showingNewBoardSheet = true
                     } label: {
                         Label("New Board", systemImage: "plus")
                     }
@@ -104,17 +93,16 @@ struct HomeView: View {
                     }
                 }
             }
-            .searchable(text: $searchText) {
-                ForEach(searchSuggestions, id: \.self) { Text($0).searchCompletion($0) }
-            }
+            .searchable(text: $searchText)
             .sheet(isPresented: $showProfileSheet) { ProfileView() }
-                // board navigation
-            .navigationDestination(for: String.self) { id in
-                KanbanBoardView(
-                    viewModel: KanbanBoardViewModel(boardID: id)
-                )
+            .sheet(isPresented: $showingNewBoardSheet) {
+                NewBoardSheet { title, description, image in
+                    Task {
+                        await createBoard(title: title, description: description, image: image)
+                    }
+                }
             }
-                // hidden link for sign‑in
+                // Hidden link for programmatic sign-in navigation
             NavigationLink(
                 destination: AuthenticateView().environmentObject(authManager),
                 isActive: $navigateToAuth
@@ -128,54 +116,158 @@ struct HomeView: View {
     private func loadBoards() async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         do {
-            let snap = try await db.collection("users")
+            let snap = try await db
+                .collection("users")
                 .document(uid)
                 .collection("boards")
                 .getDocuments()
-            boards = snap.documents.map { $0.documentID }
+            boards = snap.documents.compactMap { doc in
+                let data = doc.data()
+                guard let title = data["title"] as? String else { return nil }
+                let photoURL = data["photoURL"] as? String
+                return BoardInfo(id: doc.documentID, title: title, photoURL: photoURL)
+            }
         } catch {
-            print("Failed to load boards: \(error)")
+            print("Failed to load boards:", error)
         }
     }
     
-        /// Create a new board doc, save reference under user, then navigate to it.
-    private func createBoard() async {
+        /// Create a new board doc, set up defaults, and navigate to it.
+    private func createBoard(title: String, description: String?, image: UIImage?) async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         do {
+                // 1️⃣ Create the board document
             let newRef  = db.collection("boards").document()
             let boardID = newRef.documentID
             
-                // root board document
-            try await newRef.setData([
+            var data: [String: Any] = [
                 "ownerUid": uid,
                 "invited": [],
-                "created": FieldValue.serverTimestamp()
-            ])
+                "created": FieldValue.serverTimestamp(),
+                "title": title
+            ]
+            if let desc = description {
+                data["description"] = desc
+            }
+            try await newRef.setData(data)
             
-                // reference under the user
-            try await db.collection("users")
+                // 2️⃣ Create default columns
+            let columnsRef = newRef.collection("columns")
+            let defaultCols: [[String: Any]] = [
+                ["localId": UUID().uuidString, "title": "To Do",       "cards": [], "order": 0],
+                ["localId": UUID().uuidString, "title": "In Progress","cards": [], "order": 1],
+                ["localId": UUID().uuidString, "title": "Done",        "cards": [], "order": 2]
+            ]
+            for colData in defaultCols {
+                let colDoc = columnsRef.document()
+                try await colDoc.setData(colData)
+            }
+            
+                // 3️⃣ Upload photo if provided
+            if let image {
+                let storageRef = Storage.storage().reference()
+                    .child("boards/\(boardID)/photo.jpg")
+                if let jpeg = image.jpegData(compressionQuality: 0.8) {
+                    try await storageRef.putDataAsync(jpeg, metadata: nil)
+                    let url = try await storageRef.downloadURL()
+                    try await newRef.updateData(["photoURL": url.absoluteString])
+                }
+            }
+            
+                // 4️⃣ Reference under the user
+            var userBoardData: [String: Any] = [
+                "created": FieldValue.serverTimestamp(),
+                "title": title
+            ]
+            if let imageURL = image {
+                    // store photo URL if you saved one
+                    // userBoardData["photoURL"] = ...
+            }
+            try await db
+                .collection("users")
                 .document(uid)
                 .collection("boards")
                 .document(boardID)
-                .setData(["created": FieldValue.serverTimestamp()])
+                .setData(userBoardData)
             
-            boards.append(boardID)
-            navBoardID = boardID     // triggers NavigationDestination
+                // 5️⃣ Update local list and navigate
+            boards.append(BoardInfo(id: boardID, title: title, photoURL: nil))
+                // Immediate navigation is handled by the direct NavigationLink
         } catch {
-            print("Failed to create board: \(error)")
+            print("Failed to create board:", error)
         }
     }
     
-        // MARK: – Search helpers
-    private var filteredItems: [Item] {
+    private var filteredBoards: [BoardInfo] {
         searchText.isEmpty
-        ? allItems
-        : allItems.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+        ? boards
+        : boards.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
     }
+}
+
+private struct NewBoardSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @State private var title = ""
+    @State private var description = ""
+    @State private var photoItem: PhotosPickerItem?
+    @State private var imageData: Data?
     
-    private var searchSuggestions: [String] {
-        allItems.map { $0.title }
-            .filter { $0.localizedCaseInsensitiveContains(searchText) }
+    var onCreate: (String, String?, UIImage?) -> Void
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Title *") {
+                    TextField("Enter board title", text: $title)
+                }
+                Section("Description") {
+                    TextField("Enter description (optional)", text: $description)
+                }
+                Section("Photo") {
+                    PhotosPicker(selection: $photoItem,
+                                 matching: .images,
+                                 photoLibrary: .shared()) {
+                        HStack {
+                            Label("Choose Photo", systemImage: "photo")
+                            Spacer()
+                            if let data = imageData,
+                               let uiImage = UIImage(data: data) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 60, height: 60)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                            }
+                        }
+                    }
+                                 .onChange(of: photoItem) { item in
+                                     Task {
+                                         if let data = try? await item?.loadTransferable(type: Data.self) {
+                                             imageData = data
+                                         }
+                                     }
+                                 }
+                }
+            }
+            .navigationTitle("New Board")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Create") {
+                        let img = imageData.flatMap { UIImage(data: $0) }
+                        onCreate(
+                            title.trimmingCharacters(in: .whitespaces),
+                            description.isEmpty ? nil : description,
+                            img
+                        )
+                        dismiss()
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
     }
 }
 

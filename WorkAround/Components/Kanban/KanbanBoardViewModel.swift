@@ -18,7 +18,7 @@ class KanbanBoardViewModel: ObservableObject {
     
         // MARK: – Lifecycle -------------------------------------------------------
     
-    init(boardID: String = "sharedBoard1") {
+    init(boardID: String) {
         self.boardID = boardID
         fetchColumns()
     }
