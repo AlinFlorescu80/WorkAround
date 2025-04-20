@@ -14,11 +14,12 @@ class KanbanBoardViewModel: ObservableObject {
     @Published var columns: [KanbanColumn] = []
     
     private let db      = Firestore.firestore()
-    private let boardID = "sharedBoard1"   // Later, you can make this dynamic
+    let boardID: String                     // board identifier (public so views can read it)
     
         // MARK: – Lifecycle -------------------------------------------------------
     
-    init() {
+    init(boardID: String = "sharedBoard1") {
+        self.boardID = boardID
         fetchColumns()
     }
     

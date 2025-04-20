@@ -1,14 +1,8 @@
-    //
-    //  KanbanBoardView.swift
-    //  WorkAround
-    //
-    //  Created by Alin Florescu on 18.02.2025.
-    //
-
 import SwiftUI
 
 struct KanbanBoardView: View {
     @StateObject private var viewModel = KanbanBoardViewModel()
+    @State private var showingInviteSheet = false
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -24,13 +18,6 @@ struct KanbanBoardView: View {
                             VStack(spacing: 8) {
                                 ForEach(column.cards.indices, id: \.self) { idx in
                                     KanbanCardView(card: $column.cards[idx])
-                                        //                                        .onDrag {
-                                        //                                            NSItemProvider(object: card.id.uuidString as NSString)
-                                        //                                        }
-                                        //                                        .onDrop(of: [.text], delegate: CardDropDelegate(targetCard: card, targetColumn: $column, allColumns: $viewModel.columns))
-                                        //                                        .onChange(of: card) { _ in
-                                        //                                            viewModel.saveColumn(column)
-                                        //                                        }
                                 }
                             }
                             .padding()
@@ -44,7 +31,6 @@ struct KanbanBoardView: View {
                             let newCard = KanbanCard(title: "New Task", details: "Task details")
                             withAnimation {
                                 column.cards.append(newCard)
-                                    // viewModel.saveColumn(column)
                             }
                         }) {
                             HStack {
@@ -80,8 +66,28 @@ struct KanbanBoardView: View {
                     .cornerRadius(8)
                     .shadow(radius: 2)
                 }
+                
+                    // Invite Users button
+                Button {
+                    showingInviteSheet = true
+                } label: {
+                    VStack {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .resizable()
+                            .frame(width: 50, height: 50)
+                        Text("Invite")
+                            .font(.headline)
+                    }
+                    .frame(width: 250, height: 400)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .shadow(radius: 2)
+                }
             }
             .padding()
+        }
+        .sheet(isPresented: $showingInviteSheet) {
+            InviteUserView(boardID: viewModel.boardID)
         }
         .onDisappear {
             for col in viewModel.columns {
