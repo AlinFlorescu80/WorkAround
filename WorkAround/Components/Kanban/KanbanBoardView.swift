@@ -1,8 +1,10 @@
 import SwiftUI
+import FirebaseAuth
 
 struct KanbanBoardView: View {
     @StateObject private var viewModel: KanbanBoardViewModel
     @State private var showingInviteSheet = false
+    @State private var showingChat = false
     
     init(boardID: String) {
         _viewModel = StateObject(wrappedValue: KanbanBoardViewModel(boardID: boardID))
@@ -72,9 +74,12 @@ struct KanbanBoardView: View {
                 }
                 
                     // Invite Users button
-                Button {
+                Button
+                {
                     showingInviteSheet = true
-                } label: {
+                }
+                    label:
+                {
                     VStack {
                         Image(systemName: "person.crop.circle.badge.plus")
                             .resizable()
@@ -87,11 +92,33 @@ struct KanbanBoardView: View {
                     .cornerRadius(8)
                     .shadow(radius: 2)
                 }
+                
+                Button {
+                    showingChat = true
+                } label: {
+                    VStack {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .resizable()
+                            .frame(width: 50, height: 50)
+                        Text("Chat")
+                            .font(.headline)
+                    }
+                    .frame(width: 250, height: 400)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .shadow(radius: 2)
+                }
+                
             }
             .padding()
         }
         .sheet(isPresented: $showingInviteSheet) {
             InviteUserView(boardID: viewModel.boardID)
+        }
+        .sheet(isPresented: $showingChat) {
+            if let email = Auth.auth().currentUser?.email {
+                ChatView(chatViewModel: ChatViewModel(boardID: viewModel.boardID), senderEmail: email)
+            }
         }
         .onDisappear {
             for col in viewModel.columns {
@@ -100,10 +127,10 @@ struct KanbanBoardView: View {
         }
     }
 }
-//#if DEBUG
-//struct KanbanBoardView_Previews: PreviewProvider {
-//    static var previews: some View {
-//        KanbanBoardView(boardID: "preview")
-//    }
-//}
-//#endif
+    //#if DEBUG
+    //struct KanbanBoardView_Previews: PreviewProvider {
+    //    static var previews: some View {
+    //        KanbanBoardView(boardID: "preview")
+    //    }
+    //}
+    //#endif
