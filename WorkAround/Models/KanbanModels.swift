@@ -1,20 +1,31 @@
-//
-//  KanbanModels.swift
-//  WorkAround
-//
-//  Created by Alin Florescu on 18.02.2025.
-//
+import Foundation
+import FirebaseFirestore
 
-import SwiftUI
-
-struct KanbanColumn: Identifiable {
-    let id = UUID()
-    var title: String
-    var cards: [KanbanCard]
-}
-
-struct KanbanCard: Identifiable, Equatable {
-    let id: UUID = UUID()
+struct KanbanCard: Identifiable, Codable {
+        /// Firestore document ID (populated after syncing).
+    @DocumentID var firestoreId: String? = nil
+    
+        /// Locally‑generated UUID so every card is unique before it’s saved.
+    var localId: String = UUID().uuidString
     var title: String
     var details: String
+    
+    
+        /// SwiftUI uses this as the stable identifier.
+    var id: String { firestoreId ?? localId }
+}
+
+struct KanbanColumn: Identifiable, Codable {
+        /// Firestore document ID (populated after syncing).
+    @DocumentID var firestoreId: String? = nil
+    
+        /// Locally‑generated UUID so every column is unique before it’s saved.
+    var localId: String = UUID().uuidString
+
+    var title: String
+    var cards: [KanbanCard]
+        /// Position of the column in the board (lower = further left).
+    var order: Int    
+        /// SwiftUI uses this as the stable identifier.
+    var id: String { firestoreId ?? localId }
 }

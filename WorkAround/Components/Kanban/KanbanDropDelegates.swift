@@ -32,7 +32,7 @@ struct CardDropDelegate: DropDelegate {
     
     private func moveCard(with draggedCardID: UUID) {
         for i in allColumns.indices {
-            if let removeIndex = allColumns[i].cards.firstIndex(where: { $0.id == draggedCardID }) {
+            if let removeIndex = allColumns[i].cards.firstIndex(where: { UUID(uuidString: $0.id ?? "") == draggedCardID }) {
                 let movingCard = allColumns[i].cards.remove(at: removeIndex)
                 if let targetIndex = targetColumn.cards.firstIndex(where: { $0.id == targetCard.id }) {
                     targetColumn.cards.insert(movingCard, at: targetIndex)
@@ -69,7 +69,7 @@ struct ColumnDropDelegate: DropDelegate {
     
     private func moveCard(with draggedCardID: UUID) {
         for i in allColumns.indices {
-            if let removeIndex = allColumns[i].cards.firstIndex(where: { $0.id == draggedCardID }) {
+            if let removeIndex = allColumns[i].cards.firstIndex(where: {UUID(uuidString: $0.id ?? "" ) == draggedCardID}) {
                 let movingCard = allColumns[i].cards.remove(at: removeIndex)
                 targetColumn.cards.append(movingCard)
                 break

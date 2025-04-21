@@ -87,7 +87,7 @@ struct AuthenticateView: View {
                             }
                             else
                             {
-                                print("User signed in successfully.")
+                                print("User signed in successfully: \(authResult!.user)!!!!!!!!!!!!!!!!")
                                 showLoadingView = false
                                 withAnimation(.bouncy)
                                 {

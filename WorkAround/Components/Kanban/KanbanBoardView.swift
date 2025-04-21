@@ -1,28 +1,17 @@
-//
-//  KanbanBoardView.swift
-//  WorkAround
-//
-//  Created by Alin Florescu on 18.02.2025.
-//
-
 import SwiftUI
 
 struct KanbanBoardView: View {
-    @State private var columns: [KanbanColumn] = [
-        KanbanColumn(title: "To Do", cards: [
-            KanbanCard(title: "Task 1", details: "Define requirements"),
-            KanbanCard(title: "Task 2", details: "Set up project")
-        ]),
-        KanbanColumn(title: "In Progress", cards: [
-            KanbanCard(title: "Task 3", details: "Design UI")
-        ]),
-        KanbanColumn(title: "Done", cards: [])
-    ]
+    @StateObject private var viewModel: KanbanBoardViewModel
+    @State private var showingInviteSheet = false
+    
+    init(boardID: String) {
+        _viewModel = StateObject(wrappedValue: KanbanBoardViewModel(boardID: boardID))
+    }
     
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 16) {
-                ForEach($columns) { $column in
+                ForEach($viewModel.columns) { $column in
                     VStack(spacing: 8) {
                         TextField("Column Title", text: $column.title)
                             .font(.headline)
@@ -31,12 +20,8 @@ struct KanbanBoardView: View {
                         
                         ScrollView {
                             VStack(spacing: 8) {
-                                ForEach($column.cards) { $card in
-                                    KanbanCardView(card: $card)
-                                        .onDrag {
-                                            NSItemProvider(object: card.id.uuidString as NSString)
-                                        }
-                                        .onDrop(of: [.text], delegate: CardDropDelegate(targetCard: card, targetColumn: $column, allColumns: $columns))
+                                ForEach(column.cards.indices, id: \.self) { idx in
+                                    KanbanCardView(card: $column.cards[idx])
                                 }
                             }
                             .padding()
@@ -44,7 +29,7 @@ struct KanbanBoardView: View {
                         .frame(minWidth: 250, maxHeight: .infinity)
                         .background(Color(UIColor.secondarySystemBackground))
                         .cornerRadius(8)
-                        .onDrop(of: [.text], delegate: ColumnDropDelegate(targetColumn: $column, allColumns: $columns))
+                        .onDrop(of: [.text], delegate: ColumnDropDelegate(targetColumn: $column, allColumns: $viewModel.columns))
                         
                         Button(action: {
                             let newCard = KanbanCard(title: "New Task", details: "Task details")
@@ -67,8 +52,10 @@ struct KanbanBoardView: View {
                 }
                 
                 Button(action: {
+                    let nextOrder = (viewModel.columns.map(\.order).max() ?? -1) + 1
+                    let newColumn = KanbanColumn(title: "New Column", cards: [], order: nextOrder)
                     withAnimation {
-                        columns.append(KanbanColumn(title: "New Column", cards: []))
+                        viewModel.columns.append(newColumn)
                     }
                 }) {
                     VStack {
@@ -83,8 +70,40 @@ struct KanbanBoardView: View {
                     .cornerRadius(8)
                     .shadow(radius: 2)
                 }
+                
+                    // Invite Users button
+                Button {
+                    showingInviteSheet = true
+                } label: {
+                    VStack {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                            .resizable()
+                            .frame(width: 50, height: 50)
+                        Text("Invite")
+                            .font(.headline)
+                    }
+                    .frame(width: 250, height: 400)
+                    .background(Color(UIColor.secondarySystemBackground))
+                    .cornerRadius(8)
+                    .shadow(radius: 2)
+                }
             }
             .padding()
         }
+        .sheet(isPresented: $showingInviteSheet) {
+            InviteUserView(boardID: viewModel.boardID)
+        }
+        .onDisappear {
+            for col in viewModel.columns {
+                viewModel.saveColumn(col)
+            }
+        }
     }
 }
+//#if DEBUG
+//struct KanbanBoardView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        KanbanBoardView(boardID: "preview")
+//    }
+//}
+//#endif
