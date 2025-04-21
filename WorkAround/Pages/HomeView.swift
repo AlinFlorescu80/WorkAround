@@ -115,17 +115,41 @@ struct HomeView: View {
         /// Load board IDs the user owns or is invited to.
     private func loadBoards() async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
+        guard let userEmail = Auth.auth().currentUser?.email?.lowercased() else { return }
         do {
-            let snap = try await db
+            var newBoards: [BoardInfo] = []
+            
+                // 1. Fetch owned boards (shallow list)
+            let ownedSnap = try await db
                 .collection("users")
                 .document(uid)
                 .collection("boards")
                 .getDocuments()
-            boards = snap.documents.compactMap { doc in
+            for doc in ownedSnap.documents {
                 let data = doc.data()
-                guard let title = data["title"] as? String else { return nil }
+                guard let title = data["title"] as? String else { continue }
                 let photoURL = data["photoURL"] as? String
-                return BoardInfo(id: doc.documentID, title: title, photoURL: photoURL)
+                newBoards.append(BoardInfo(id: doc.documentID, title: title, photoURL: photoURL))
+            }
+            
+                // 2. Fetch invited boards from root collection
+            let invitedSnap = try await db
+                .collection("boards")
+                .whereField("invited", arrayContains: userEmail)
+                .getDocuments()
+            for doc in invitedSnap.documents {
+                let boardID = doc.documentID
+                    // avoid duplicates if user is also the owner
+                guard !newBoards.contains(where: { $0.id == boardID }) else { continue }
+                let data = doc.data()
+                guard let title = data["title"] as? String else { continue }
+                let photoURL = data["photoURL"] as? String
+                newBoards.append(BoardInfo(id: boardID, title: title, photoURL: photoURL))
+            }
+            
+                // Update on main thread
+            DispatchQueue.main.async {
+                boards = newBoards
             }
         } catch {
             print("Failed to load boards:", error)
@@ -270,8 +294,8 @@ private struct NewBoardSheet: View {
         }
     }
 }
-
-#Preview {
-    HomeView(showLoadingView: true)
-        .environmentObject(AuthManager())
-}
+    //
+    //#Preview {
+    //    HomeView(showLoadingView: true)
+    //        .environmentObject(AuthManager())
+    //}

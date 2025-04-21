@@ -100,10 +100,10 @@ struct KanbanBoardView: View {
         }
     }
 }
-#if DEBUG
-struct KanbanBoardView_Previews: PreviewProvider {
-    static var previews: some View {
-        KanbanBoardView(boardID: "preview")
-    }
-}
-#endif
+//#if DEBUG
+//struct KanbanBoardView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        KanbanBoardView(boardID: "preview")
+//    }
+//}
+//#endif
