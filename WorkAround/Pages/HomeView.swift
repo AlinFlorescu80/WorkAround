@@ -150,6 +150,7 @@ struct HomeView: View {
                 // Update on main thread
             DispatchQueue.main.async {
                 boards = newBoards
+                registerBoardListeners(newBoards)   // 🔔 start listeners
             }
         } catch {
             print("Failed to load boards:", error)
@@ -216,10 +217,16 @@ struct HomeView: View {
             
                 // 5️⃣ Update local list and navigate
             boards.append(BoardInfo(id: boardID, title: title, photoURL: nil))
+            registerBoardListeners([BoardInfo(id: boardID, title: title, photoURL: nil)])
                 // Immediate navigation is handled by the direct NavigationLink
         } catch {
             print("Failed to create board:", error)
         }
+    }
+    
+        /// Start background chat listeners for every board in `infos`.
+    private func registerBoardListeners(_ infos: [BoardInfo]) {
+        infos.forEach { ChatNotificationService.shared.startListening(for: $0.id) }
     }
     
     private var filteredBoards: [BoardInfo] {
@@ -294,8 +301,9 @@ private struct NewBoardSheet: View {
         }
     }
 }
-    //
-    //#Preview {
-    //    HomeView(showLoadingView: true)
-    //        .environmentObject(AuthManager())
-    //}
+    //    
+    //    #Preview {
+    //        HomeView(showLoadingView: true)
+    //            .environmentObject(AuthManager())
+    //    }
+    // REMINDER: AM SI ANIMATIE CA LA TWITTER AICI!!!!

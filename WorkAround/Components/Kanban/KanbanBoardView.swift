@@ -117,7 +117,7 @@ struct KanbanBoardView: View {
         }
         .sheet(isPresented: $showingChat) {
             if let email = Auth.auth().currentUser?.email {
-                ChatView(chatViewModel: ChatViewModel(boardID: viewModel.boardID), senderEmail: email)
+                ChatView(viewModel: ChatViewModel(boardID: viewModel.boardID), senderEmail: email)
             }
         }
         .onDisappear {
