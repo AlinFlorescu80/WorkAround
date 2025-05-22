@@ -12,7 +12,7 @@ import FirebaseFirestore
 import PhotosUI
 import FirebaseStorage
 
-    /// Simple model for listing boards with title and optional photo.
+    /// Simple model fo  r listing boards with title and optional photo.
 private struct BoardInfo: Identifiable {
     let id: String
     let title: String

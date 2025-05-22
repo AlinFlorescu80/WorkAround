@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import FirebaseCore
+import FirebaseAuth
 import UserNotifications
 import FirebaseFirestore
 
@@ -14,6 +15,7 @@ final class ChatNotificationService {
     
         /// Start listening for new messages on a board. Calling twice with the same ID does nothing.
     func startListening(for boardID: String) {
+        var isInitialSnapshot = true  // ignore the first batch of existing messages
         guard listeners[boardID] == nil else { return }
         
         let handle = db.collection("boards")
@@ -21,6 +23,10 @@ final class ChatNotificationService {
             .collection("messages")
             .order(by: "timestamp")
             .addSnapshotListener { snapshot, error in
+                if isInitialSnapshot {
+                    isInitialSnapshot = false
+                    return
+                }
                 if let error = error {
                     print("Notification service error (\(boardID)): \(error)")
                     return
@@ -29,6 +35,11 @@ final class ChatNotificationService {
                 snapshot?.documentChanges.forEach { change in
                     if change.type == .added,
                        let msg = try? change.document.data(as: ChatMessage.self) {
+                            // Skip notifications for messages authored by the current user
+                        if let myEmail = Auth.auth().currentUser?.email?.lowercased(),
+                           msg.sender.lowercased() == myEmail {
+                            return           // ignore own message
+                        }
                         Self.fireLocalNotification(for: msg)
                     }
                 }

@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import FirebaseFirestore
-import UserNotifications
 
     /// View‑model that handles chat logic *and* local notification scheduling.
 class ChatViewModel: ObservableObject {
@@ -11,39 +10,13 @@ class ChatViewModel: ObservableObject {
     private let db = Firestore.firestore()
     private let boardID: String
     private var listener: ListenerRegistration?
-    private let notificationCenter = UNUserNotificationCenter.current()
     
     init(boardID: String) {
         self.boardID = boardID
         listenForMessages()
-        requestNotificationAuthorization()
     }
     
-        // MARK: ‑ Notifications
-    
-    private func requestNotificationAuthorization() {
-        notificationCenter.requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            if let error = error {
-                print("Notification permission error: \(error)")
-            } else {
-                print("Notification permission granted: \(granted)")
-            }
-        }
-    }
-    
-    private func scheduleLocalNotification(for message: ChatMessage) {
-        let content = UNMutableNotificationContent()
-        content.title = message.sender
-        content.body  = message.text
-        content.sound = .default
-        
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil // deliver immediately
-        )
-        notificationCenter.add(request, withCompletionHandler: nil)
-    }
+        // Notification logic removed; now handled by ChatNotificationService.
     
         // MARK: ‑ Firestore
     
@@ -58,13 +31,6 @@ class ChatViewModel: ObservableObject {
                 if let error = error {
                     print("Error fetching messages: \(error)")
                     return
-                }
-                
-                snapshot?.documentChanges.forEach { change in
-                    if change.type == .added,
-                       let newChatMessage = try? change.document.data(as: ChatMessage.self) {
-                        self.scheduleLocalNotification(for: newChatMessage)
-                    }
                 }
                 
                 guard let docs = snapshot?.documents else { return }
