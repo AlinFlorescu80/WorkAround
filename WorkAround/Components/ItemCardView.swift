@@ -1,16 +1,16 @@
-//
-//  ItemCardView.swift
-//  WorkAround
-//
-//  Created by Alin Florescu on 18.02.2025.
-//
+    //
+    //  ItemCardView.swift
+    //  WorkAround
+    //
+    //  Created by Alin Florescu on 18.02.2025.
+    //
 
 import SwiftUI
 
 struct ItemCardView: View {
     let item: Item
     let index: Int
-
+    
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "photo.fill")
@@ -32,7 +32,9 @@ struct ItemCardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                     .frame(maxWidth: .infinity, alignment: .leading)
+  
             }
+            
         }
         .padding()
         .background(
