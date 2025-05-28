@@ -99,8 +99,16 @@ struct WorkAroundApp: App {
     
     var body: some Scene {
         WindowGroup {
-            AuthenticateView()
-                .environmentObject(authManager)
+            Group {
+                if Auth.auth().currentUser != nil {
+                        // User is already signed in
+                    HomeView(showLoadingView: false)     // Replace with your app's main content view
+                } else {
+                        // User is not signed in
+                    AuthenticateView()
+                }
+            }
+            .environmentObject(authManager)
         }
         .modelContainer(sharedModelContainer)
     }
