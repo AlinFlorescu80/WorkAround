@@ -11,152 +11,185 @@ struct AuthenticateView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.colorScheme) var colorScheme
     
-    @State private var showInitialView: Bool = true  
+    @State private var showInitialView: Bool = true
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var navigateToHome: Bool = false
     @State private var showLoadingView : Bool = true
-
+    @State private var errorMessage: String?
+    @State private var isEmailEmpty: Bool = false
+    @State private var isPasswordEmpty: Bool = false
+    
     var body: some View {
         
         NavigationStack {
-            VStack {
-                Spacer()
-                
-                
-                Image("WorkAroundIcon")
-                    .resizable()
-                    .frame(width: 250, height: 250)
-                
-                Spacer()
-                
-                if showInitialView
-                {
-                    
-                    Button("Sign in")
-                    {
-                        withAnimation(.bouncy) {
-                            showInitialView.toggle()
-                        }
-                    }
-                    .frame(width: 250, height: 50)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .padding()
+            ZStack(alignment: .top) {
+                VStack {
+                    Spacer()
                     
                     
-                    Button("Sign Up")
-                    {
-                        
-                    }
-                    .frame(width: 250, height: 50)
-                    .foregroundColor(.blue)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-                    .padding(.bottom)
-                    
-                    
-                    Button ("Continue without an account...")
-                    {
-                        
-                    }
+                    Image("WorkAroundIcon")
+                        .resizable()
+                        .frame(width: 250, height: 250)
                     
                     Spacer()
-                }
-                
-                else {
-                    TextField("Mail", text: $email)
-                        .frame(width: 250)
-                        .keyboardType(.emailAddress)
-                        .textFieldStyle(.roundedBorder)
-                        .autocapitalization(.none)
                     
-                    SecureField("Password", text: $password)
-                        .frame(width: 250)
-                        .textFieldStyle(.roundedBorder)
-                    
-                    Button("Sign in with Email")
+                    if showInitialView
                     {
-                        Auth.auth().signIn(withEmail: email, password: password)
-                        {
-                            authResult,
-                            error in
-                            if let error = error
-                            {
-                                print("Failed to sign in: \(error.localizedDescription)")
+                        
+                        Button {
+                            withAnimation(.bouncy) {
+                                showInitialView.toggle()
                             }
-                            else
+                        } label: {
+                            Text("Sign in")
+                                .frame(width: 250, height: 50)
+                                .contentShape(Rectangle())
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
+                        }
+                        .padding()
+                        
+                        
+                        Button {
+                            
+                        } label: {
+                            Text("Sign Up")
+                                .frame(width: 250, height: 50)
+                                .contentShape(Rectangle())
+                                .foregroundColor(.blue)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+                                .cornerRadius(8)
+                        }
+                        .padding(.bottom)
+                        
+                        
+                        Button {
+                            
+                        } label: {
+                            Text("Continue without an account...")
+                                .frame(width: 250, height: 50)
+                                .contentShape(Rectangle())
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+                                .cornerRadius(8)
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    else {
+                        TextField("Mail", text: $email)
+                            .frame(width: 250)
+                            .keyboardType(.emailAddress)
+                            .textFieldStyle(.roundedBorder)
+                            .autocapitalization(.none)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(isEmailEmpty ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
+                            )
+                        
+                        SecureField("Password", text: $password)
+                            .frame(width: 250)
+                            .textFieldStyle(.roundedBorder)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(isPasswordEmpty ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
+                            )
+                        
+                        Button {
+                                // Validate fields
+                            isEmailEmpty = email.isEmpty
+                            isPasswordEmpty = password.isEmpty
+                            guard !isEmailEmpty && !isPasswordEmpty else { return }
+                            
+                            Auth.auth().signIn(withEmail: email, password: password)
                             {
-                                print("User signed in successfully: \(authResult!.user)!!!!!!!!!!!!!!!!")
-                                showLoadingView = false
-                                withAnimation(.bouncy)
+                                authResult,
+                                error in
+                                if let error = error
                                 {
-                                    navigateToHome = true
-                                    authManager.isSignedIn = true
+                                    errorMessage = "Sign in failed: \(error.localizedDescription)"
+                                }
+                                else
+                                {
+                                    errorMessage = nil
+                                    print("User signed in successfully: \(authResult!.user)!!!!!!!!!!!!!!!!")
+                                    showLoadingView = false
+                                    withAnimation(.bouncy)
+                                    {
+                                        navigateToHome = true
+                                        authManager.isSignedIn = true
+                                    }
                                 }
                             }
+                        } label: {
+                            Text("Sign in with Email")
+                                .frame(width: 250, height: 50)
+                                .contentShape(Rectangle())
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
                         }
-                    }
-                    .padding()
-                    .frame(width: 250, height: 50)
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .padding(.top)
-                    
-                    
-                    Button {
-                        Task {
-                            if await signInWithGoogle() {
-                                navigateToHome = true
-                                authManager.isSignedIn = true
-                            }
-                        }
-                    } label: {
-                        Text("Sign in with Google")
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                            .frame(width: 250)
-                            .padding(.vertical, 8)
-                            .background(alignment: .leading) {
-                                Image("Google")
-                                    .resizable()
-                                    .scaledToFit()
-                            }
-                            .background(Color.white)
-                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-                    }
-//                    .buttonStyle(.bordered)
-                    
-                    
-//                    Button("Sign in with Google")
-//                    {
-//                        
-//                    }
-//                    .frame(width: 250, height: 50)
-//                    .foregroundColor(.blue)
-//                    
-//                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-//                    .padding()
-//                    
-                    
-                    Button("🍏 Sign in With Apple")
-                    {
+                        .padding(.top)
                         
-                        showInitialView.toggle()
+                        
+                        Button {
+                            Task {
+                                if await signInWithGoogle() {
+                                    navigateToHome = true
+                                    authManager.isSignedIn = true
+                                    errorMessage = nil
+                                } else {
+                                    errorMessage = "Google sign-in failed."
+                                }
+                            }
+                        } label: {
+                            Text("Sign in with Google")
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                                .frame(width: 250, height: 50)
+                                .contentShape(Rectangle())
+                                .cornerRadius(8)
+                                .background(alignment: .leading) {
+                                    Image("Google")
+                                        .resizable()
+                                        .scaledToFit()
+                                }
+                                .background(Color.white)
+                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+                        }
+                            //                    .buttonStyle(.bordered)
+                        
+                        
+                            //                    Button("Sign in with Google")
+                            //                    {
+                            //
+                            //                    }
+                            //                    .frame(width: 250, height: 50)
+                            //                    .foregroundColor(.blue)
+                            //
+                            //                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
+                            //                    .padding()
+                            //
+                        
+                        
+                        
+                        Spacer()
+                        
+                        
                     }
-                    .frame(width: 250, height: 50)
-                    .foregroundColor(.blue)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-                    .padding(.bottom)
-                    
-                    Spacer()
-                    
                     
                 }
                 
             }
-            
-            
+            .alert("Error", isPresented: Binding<Bool>(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage ?? "")
+            }
             .overlay(
                 Group {
                     if !showInitialView {
@@ -178,10 +211,7 @@ struct AuthenticateView: View {
                     }
                 },
                 alignment: .topLeading
-                
-                
             )
-            
             .navigationDestination(isPresented: $navigateToHome)
             {
                 HomeView(showLoadingView: false)
@@ -192,16 +222,16 @@ struct AuthenticateView: View {
     
     
     
-  
+    
 }
 
 
-//#Preview {
-//    AuthenticateView()
-//}
+    //#Preview {
+    //    AuthenticateView()
+    //}
 
 
-//MARK: Google Sign-In
+    //MARK: Google Sign-In
 
 enum AuthenticationError: Error {
     case tokenError(message: String)
