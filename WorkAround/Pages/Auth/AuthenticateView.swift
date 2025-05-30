@@ -19,6 +19,8 @@ struct AuthenticateView: View {
     @State private var errorMessage: String?
     @State private var isEmailEmpty: Bool = false
     @State private var isPasswordEmpty: Bool = false
+    @State private var isEmailInvalid: Bool = false
+    @State private var isSigningUp: Bool = false
     
     var body: some View {
         
@@ -39,6 +41,7 @@ struct AuthenticateView: View {
                         
                         Button {
                             withAnimation(.bouncy) {
+                                isSigningUp = false
                                 showInitialView.toggle()
                             }
                         } label: {
@@ -53,7 +56,10 @@ struct AuthenticateView: View {
                         
                         
                         Button {
-                            
+                            withAnimation(.bouncy) {
+                                isSigningUp = true
+                                showInitialView.toggle()
+                            }
                         } label: {
                             Text("Sign Up")
                                 .frame(width: 250, height: 50)
@@ -65,15 +71,6 @@ struct AuthenticateView: View {
                         .padding(.bottom)
                         
                         
-                        Button {
-                            
-                        } label: {
-                            Text("Continue without an account...")
-                                .frame(width: 250, height: 50)
-                                .contentShape(Rectangle())
-                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-                                .cornerRadius(8)
-                        }
                         
                         Spacer()
                     }
@@ -86,7 +83,7 @@ struct AuthenticateView: View {
                             .autocapitalization(.none)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isEmailEmpty ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
+                                    .stroke((isEmailEmpty || isEmailInvalid) ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
                             )
                         
                         SecureField("Password", text: $password)
@@ -102,29 +99,44 @@ struct AuthenticateView: View {
                             isEmailEmpty = email.isEmpty
                             isPasswordEmpty = password.isEmpty
                             guard !isEmailEmpty && !isPasswordEmpty else { return }
+                                // Validate email format
+                            let emailPattern = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+                            let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailPattern)
+                            isEmailInvalid = !emailPredicate.evaluate(with: email)
+                            if isEmailInvalid {
+                                errorMessage = "Please enter a valid email address."
+                                return
+                            }
                             
-                            Auth.auth().signIn(withEmail: email, password: password)
-                            {
-                                authResult,
-                                error in
-                                if let error = error
-                                {
-                                    errorMessage = "Sign in failed: \(error.localizedDescription)"
+                            if isSigningUp {
+                                Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+                                    if let error = error {
+                                        errorMessage = "Sign up failed: \(error.localizedDescription)"
+                                    } else {
+                                        errorMessage = nil
+                                        showLoadingView = false
+                                        withAnimation(.bouncy) {
+                                            navigateToHome = true
+                                            authManager.isSignedIn = true
+                                        }
+                                    }
                                 }
-                                else
-                                {
-                                    errorMessage = nil
-                                    print("User signed in successfully: \(authResult!.user)!!!!!!!!!!!!!!!!")
-                                    showLoadingView = false
-                                    withAnimation(.bouncy)
-                                    {
-                                        navigateToHome = true
-                                        authManager.isSignedIn = true
+                            } else {
+                                Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
+                                    if let error = error {
+                                        errorMessage = "Sign in failed: \(error.localizedDescription)"
+                                    } else {
+                                        errorMessage = nil
+                                        showLoadingView = false
+                                        withAnimation(.bouncy) {
+                                            navigateToHome = true
+                                            authManager.isSignedIn = true
+                                        }
                                     }
                                 }
                             }
                         } label: {
-                            Text("Sign in with Email")
+                            Text(isSigningUp ? "Sign up with Email" : "Sign in with Email")
                                 .frame(width: 250, height: 50)
                                 .contentShape(Rectangle())
                                 .background(Color.blue)
@@ -196,6 +208,7 @@ struct AuthenticateView: View {
                         Button(action: {
                             withAnimation(.bouncy) {
                                 showInitialView = true
+                                isSigningUp = false
                             }
                         }) {
                             HStack(spacing: 4) {
