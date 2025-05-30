@@ -50,10 +50,26 @@ struct HomeView: View {
         }
         .task { await loadBoards() }      // fetch board list on appear
         .onAppear {
+                // Redirect to sign-in if not authenticated
+            if !authManager.isSignedIn {
+                navigateToAuth = true
+                return
+            }
                 // Fake splash‑screen delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 withAnimation { isLoading = false }
             }
+        }
+        .onChange(of: authManager.isSignedIn) { signedIn in
+                // Navigate back to sign-in screen when signing out
+            if !signedIn {
+                navigateToAuth = true
+            }
+        }
+            // Present authentication modally if not signed in
+        .fullScreenCover(isPresented: $navigateToAuth) {
+            AuthenticateView()
+                .environmentObject(authManager)
         }
     }
     
@@ -83,9 +99,6 @@ struct HomeView: View {
                 }
                     // Trailing: auth/profile
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    if !authManager.isSignedIn {
-                        Button("Sign In") { navigateToAuth = true }
-                    }
                     Button { showProfileSheet = true } label: {
                         Image(systemName: "person.circle")
                             .resizable()
@@ -102,12 +115,6 @@ struct HomeView: View {
                     }
                 }
             }
-                // Hidden link for programmatic sign-in navigation
-            NavigationLink(
-                destination: AuthenticateView().environmentObject(authManager),
-                isActive: $navigateToAuth
-            ) { EmptyView() }
-                .hidden()
         }
     }
     
@@ -301,7 +308,7 @@ private struct NewBoardSheet: View {
         }
     }
 }
-    //    
+    //
     //    #Preview {
     //        HomeView(showLoadingView: true)
     //            .environmentObject(AuthManager())
