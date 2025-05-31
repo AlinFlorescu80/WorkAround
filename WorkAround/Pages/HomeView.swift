@@ -13,10 +13,11 @@ import PhotosUI
 import FirebaseStorage
 import UIKit
 
-    /// Simple model fo  r listing boards with title and optional photo.
+    /// Simple model for listing boards with title, optional description, and optional photo.
 private struct BoardInfo: Identifiable {
     let id: String
     let title: String
+    let description: String?
     let photoURL: String?
 }
 
@@ -52,7 +53,7 @@ struct HomeView: View {
         }
         .task { await loadBoards() }      // fetch board list on appear
         .onAppear {
-                // Redirect to sign-in if not authenticated
+                // Redirect to sign‑in if not authenticated
             if !authManager.isSignedIn {
                 navigateToAuth = true
                 return
@@ -63,7 +64,7 @@ struct HomeView: View {
             }
         }
         .onChange(of: authManager.isSignedIn) { signedIn in
-                // Navigate back to sign-in screen when signing out
+                // Navigate back to sign‑in screen when signing out
             if !signedIn {
                 navigateToAuth = true
             }
@@ -82,20 +83,19 @@ struct HomeView: View {
                 Section("My Boards") {
                     ForEach(filteredBoards) { board in
                         NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
-                            HStack {
+                            VStack(alignment: .leading, spacing: 4) {
                                 Text(board.title)
+                                    .font(.headline)
                                     .foregroundColor(.primary)
                                 
-                                Spacer()
-                                
-                                
-                                    //                                Image(systemName: "chevron.right")
-                                    //                                    .imageScale(.small)
-                                    //                                    .font(.subheadline.weight(.semibold))
-                                    //                                    .foregroundColor(.secondary)
+                                if let desc = board.description, !desc.isEmpty {
+                                    Text(desc)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             .padding()
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(Color(uiColor: .secondarySystemBackground))
@@ -190,12 +190,16 @@ struct HomeView: View {
                     .document(uid)
                     .collection("boards")
                     .document(boardID)
-                    .updateData(["title": title])
+                    .updateData([
+                        "title": title,
+                        "description": description ?? FieldValue.delete()
+                    ])
             }
             DispatchQueue.main.async {
                 if let idx = boards.firstIndex(where: { $0.id == boardID }) {
                     boards[idx] = BoardInfo(id: boardID,
                                             title: title,
+                                            description: description ?? boards[idx].description,
                                             photoURL: boards[idx].photoURL)
                 }
             }
@@ -221,8 +225,12 @@ struct HomeView: View {
             for doc in ownedSnap.documents {
                 let data = doc.data()
                 guard let title = data["title"] as? String else { continue }
+                let desc = data["description"] as? String
                 let photoURL = data["photoURL"] as? String
-                newBoards.append(BoardInfo(id: doc.documentID, title: title, photoURL: photoURL))
+                newBoards.append(BoardInfo(id: doc.documentID,
+                                           title: title,
+                                           description: desc,
+                                           photoURL: photoURL))
             }
             
                 // 2. Fetch invited boards from root collection
@@ -236,8 +244,12 @@ struct HomeView: View {
                 guard !newBoards.contains(where: { $0.id == boardID }) else { continue }
                 let data = doc.data()
                 guard let title = data["title"] as? String else { continue }
+                let desc = data["description"] as? String
                 let photoURL = data["photoURL"] as? String
-                newBoards.append(BoardInfo(id: boardID, title: title, photoURL: photoURL))
+                newBoards.append(BoardInfo(id: boardID,
+                                           title: title,
+                                           description: desc,
+                                           photoURL: photoURL))
             }
             
                 // Update on main thread
@@ -272,9 +284,9 @@ struct HomeView: View {
                 // 2️⃣ Create default columns
             let columnsRef = newRef.collection("columns")
             let defaultCols: [[String: Any]] = [
-                ["localId": UUID().uuidString, "title": "To Do",       "cards": [], "order": 0],
-                ["localId": UUID().uuidString, "title": "In Progress","cards": [], "order": 1],
-                ["localId": UUID().uuidString, "title": "Done",        "cards": [], "order": 2]
+                ["localId": UUID().uuidString, "title": "To Do",        "cards": [], "order": 0],
+                ["localId": UUID().uuidString, "title": "In Progress",  "cards": [], "order": 1],
+                ["localId": UUID().uuidString, "title": "Done",         "cards": [], "order": 2]
             ]
             for colData in defaultCols {
                 let colDoc = columnsRef.document()
@@ -297,9 +309,8 @@ struct HomeView: View {
                 "created": FieldValue.serverTimestamp(),
                 "title": title
             ]
-            if let imageURL = image {
-                    // store photo URL if you saved one
-                    // userBoardData["photoURL"] = ...
+            if let description {
+                userBoardData["description"] = description
             }
             try await db
                 .collection("users")
@@ -309,8 +320,14 @@ struct HomeView: View {
                 .setData(userBoardData)
             
                 // 5️⃣ Update local list and navigate
-            boards.append(BoardInfo(id: boardID, title: title, photoURL: nil))
-            registerBoardListeners([BoardInfo(id: boardID, title: title, photoURL: nil)])
+            boards.append(BoardInfo(id: boardID,
+                                    title: title,
+                                    description: description,
+                                    photoURL: nil))
+            registerBoardListeners([BoardInfo(id: boardID,
+                                              title: title,
+                                              description: description,
+                                              photoURL: nil)])
                 // Immediate navigation is handled by the direct NavigationLink
         } catch {
             print("Failed to create board:", error)
@@ -412,7 +429,7 @@ private struct EditBoardSheet: View {
     init(board: BoardInfo, onSave: @escaping (String, String?) -> Void) {
         self.board = board
         _title = State(initialValue: board.title)
-        _description = State(initialValue: "")
+        _description = State(initialValue: board.description ?? "")
         self.onSave = onSave
     }
     
