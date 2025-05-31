@@ -11,6 +11,7 @@ import FirebaseAuth
 import FirebaseFirestore
 import PhotosUI
 import FirebaseStorage
+import UIKit
 
     /// Simple model fo  r listing boards with title and optional photo.
 private struct BoardInfo: Identifiable {
@@ -30,6 +31,7 @@ struct HomeView: View {
     @State private var navigateToAuth       = false
     @State var showLoadingView: Bool
     @State private var showingNewBoardSheet = false
+    @State private var editingBoard: BoardInfo?
     
         // MARK: – Board Data
     @State private var boards: [BoardInfo] = []      // user’s boards with metadata
@@ -77,15 +79,50 @@ struct HomeView: View {
     private var dashboard: some View {
         NavigationStack {
             List {
-                    // Boards section
                 Section("My Boards") {
                     ForEach(filteredBoards) { board in
                         NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
-                            Text(board.title)
+                            HStack {
+                                Text(board.title)
+                                    .foregroundColor(.primary)
+                                
+                                Spacer()
+                                
+                                
+                                    //                                Image(systemName: "chevron.right")
+                                    //                                    .imageScale(.small)
+                                    //                                    .font(.subheadline.weight(.semibold))
+                                    //                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color(uiColor: .secondarySystemBackground))
+                            )
                         }
+                        .buttonStyle(.plain)          // hide default accessory arrow
+                        .contextMenu {
+                            Button {
+                                editingBoard = board
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                Task { await deleteBoard(board) }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal)
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("Home")
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -115,6 +152,55 @@ struct HomeView: View {
                     }
                 }
             }
+            .sheet(item: $editingBoard) { board in
+                EditBoardSheet(board: board) { newTitle, newDesc in
+                    Task {
+                        await updateBoard(boardID: board.id, title: newTitle, description: newDesc)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func deleteBoard(_ board: BoardInfo) async {
+        do {
+            try await db.collection("boards").document(board.id).delete()
+            if let uid = Auth.auth().currentUser?.uid {
+                try await db.collection("users")
+                    .document(uid)
+                    .collection("boards")
+                    .document(board.id)
+                    .delete()
+            }
+            DispatchQueue.main.async {
+                boards.removeAll { $0.id == board.id }
+            }
+        } catch {
+            print("Failed to delete board:", error)
+        }
+    }
+    
+    private func updateBoard(boardID: String, title: String, description: String?) async {
+        do {
+            var data: [String: Any] = ["title": title]
+            if let desc = description { data["description"] = desc }
+            try await db.collection("boards").document(boardID).updateData(data)
+            if let uid = Auth.auth().currentUser?.uid {
+                try await db.collection("users")
+                    .document(uid)
+                    .collection("boards")
+                    .document(boardID)
+                    .updateData(["title": title])
+            }
+            DispatchQueue.main.async {
+                if let idx = boards.firstIndex(where: { $0.id == boardID }) {
+                    boards[idx] = BoardInfo(id: boardID,
+                                            title: title,
+                                            photoURL: boards[idx].photoURL)
+                }
+            }
+        } catch {
+            print("Failed to update board:", error)
         }
     }
     
@@ -314,3 +400,46 @@ private struct NewBoardSheet: View {
     //            .environmentObject(AuthManager())
     //    }
     // REMINDER: AM SI ANIMATIE CA LA TWITTER AICI!!!!
+
+private struct EditBoardSheet: View {
+    @Environment(\.dismiss) var dismiss
+    
+    var board: BoardInfo
+    @State private var title: String
+    @State private var description: String
+    var onSave: (String, String?) -> Void
+    
+    init(board: BoardInfo, onSave: @escaping (String, String?) -> Void) {
+        self.board = board
+        _title = State(initialValue: board.title)
+        _description = State(initialValue: "")
+        self.onSave = onSave
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Title *") {
+                    TextField("Enter board title", text: $title)
+                }
+                Section("Description") {
+                    TextField("Enter description (optional)", text: $description)
+                }
+            }
+            .navigationTitle("Edit Board")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(title.trimmingCharacters(in: .whitespaces),
+                               description.isEmpty ? nil : description)
+                        dismiss()
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}
