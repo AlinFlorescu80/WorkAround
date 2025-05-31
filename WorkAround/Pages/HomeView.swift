@@ -82,17 +82,29 @@ struct HomeView: View {
             List {
                 Section("My Boards") {
                     ForEach(filteredBoards) { board in
-                        NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(board.title)
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                
-                                if let desc = board.description, !desc.isEmpty {
-                                    Text(desc)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                        ZStack {
+                                // Visible row content
+                            HStack(alignment: .center) {
+                                    // Title + optional description on the left
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(board.title)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    
+                                    if let desc = board.description, !desc.isEmpty {
+                                        Text(desc)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
                                 }
+                                
+                                Spacer(minLength: 12)
+                                
+                                    // Chevron icon on the right
+                                Image(systemName: "chevron.right")
+                                    .imageScale(.small)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.secondary)
                             }
                             .padding()
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -100,8 +112,13 @@ struct HomeView: View {
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                                     .fill(Color(uiColor: .secondarySystemBackground))
                             )
+                            
+                                // Invisible NavigationLink overlay (no chevron)
+                            NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
+                                EmptyView()
+                            }
+                            .opacity(0)                // hide link label & chevron
                         }
-                        .buttonStyle(.plain)          // hide default accessory arrow
                         .contextMenu {
                             Button {
                                 editingBoard = board
