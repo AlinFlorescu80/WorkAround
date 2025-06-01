@@ -56,7 +56,7 @@ struct KanbanCardView: View {
             .padding(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.blue, lineWidth: 1)
+                    .stroke(Color.accentColor, lineWidth: 1)
             )
             .sheet(isPresented: $showingDrawing) {
                 NavigationView {
@@ -104,8 +104,12 @@ struct KanbanCardView: View {
             }
         }
         .padding()
-        .background(Color.white)
+        .background(Color(UIColor.secondarySystemBackground))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(UIColor.separator), lineWidth: 1)
+        )
         .shadow(radius: 2)
     }
 }
