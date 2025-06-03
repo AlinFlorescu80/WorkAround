@@ -5,6 +5,7 @@ struct KanbanBoardView: View {
     @StateObject private var viewModel: KanbanBoardViewModel
     @State private var showingInviteSheet = false
     @State private var showingChat = false
+    let userEmail = Auth.auth().currentUser?.email
     
     init(boardID: String) {
         _viewModel = StateObject(wrappedValue: KanbanBoardViewModel(boardID: boardID))

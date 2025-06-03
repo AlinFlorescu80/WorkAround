@@ -8,6 +8,7 @@
 import SwiftUI
 import Foundation
 import FirebaseFirestore
+import FirebaseAuth
 
 struct ChatView: View {
     @ObservedObject var viewModel: ChatViewModel
@@ -17,18 +18,21 @@ struct ChatView: View {
         VStack {
             ScrollViewReader { proxy in
                 ScrollView {
-                    ForEach(viewModel.messages) { msg in
-                        HStack {
-                            if msg.sender == senderEmail {
-                                Spacer()
-                                bubble(msg.text, color: .blue.opacity(0.2))
-                            } else {
-                                bubble(msg.text, color: .gray.opacity(0.2))
-                                Spacer()
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(viewModel.messages) { msg in
+                            HStack {
+                                if msg.sender == senderEmail {
+                                    Spacer()
+                                    bubble(msg.text, color: .blue.opacity(0.2))
+                                } else {
+                                    bubble(msg.text, color: .gray.opacity(0.2))
+                                    Spacer()
+                                }
                             }
+                            .id(msg.id)
                         }
-                        .id(msg.id)
                     }
+                    .padding(.horizontal, 10)
                 }
                 .onChange(of: viewModel.messages.count) { _ in
                         // auto‑scroll to the latest message
@@ -54,7 +58,9 @@ struct ChatView: View {
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
+            .padding(.top, 8)
         }
+        .padding(.vertical, 8)
         .navigationTitle("Board Chat")
     }
     
