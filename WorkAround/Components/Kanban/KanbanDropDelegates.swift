@@ -63,7 +63,6 @@ struct ColumnDropDelegate: DropDelegate {
                     for i in allColumns.indices {
                         if let idx = allColumns[i].cards.firstIndex(where: { $0.id == idString }) {
                             let card = allColumns[i].cards.remove(at: idx)
-                                // Avoid duplicates
                             if !targetColumn.cards.contains(where: { $0.id == card.id }) {
                                 targetColumn.cards.append(card)
                             }

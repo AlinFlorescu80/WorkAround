@@ -30,13 +30,21 @@ struct KanbanBoardView: View {
                             
                             ScrollView {
                                 VStack(spacing: 8) {
-                                    ForEach(column.cards.indices, id: \.self) { idx in
-                                        KanbanCardView(card: $column.cards[idx])
+                                    ForEach($column.cards, id: \.id) { $card in
+                                        KanbanCardView(card: $card)
                                             .onDrag {
-                                                let cardID = column.cards[idx].id.data(using: .utf8)
+                                                let cardID = card.id.data(using: .utf8)
                                                 return NSItemProvider(item: cardID as NSData?, typeIdentifier: "public.text")
                                             }
-                                            // Remove the .onDrop from here!
+                                            .contextMenu {
+                                                Button(role: .destructive) {
+                                                    if let idx = column.cards.firstIndex(where: { $0.id == card.id }) {
+                                                        column.cards.remove(at: idx)
+                                                    }
+                                                } label: {
+                                                    Label("Delete", systemImage: "trash")
+                                                }
+                                            }
                                     }
                                 }
                                 .padding()
