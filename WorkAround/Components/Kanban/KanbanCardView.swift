@@ -5,6 +5,7 @@ import FirebaseFirestore
 
 struct KanbanCardView: View {
     @Binding var card: KanbanCard
+    var classification: String? = nil
     @State private var showingDrawing = false
     @State private var canvas = PKCanvasView()
     
@@ -102,9 +103,16 @@ struct KanbanCardView: View {
                         }
                     }
             }
+            if let classification = classification {
+                Text(classification)
+                    .font(.caption)
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.gray)
+            }
         }
         .padding()
-        .background(Color(UIColor.secondarySystemBackground))
+        .background(pastelBackgroundColor(for: classification))
         .cornerRadius(8)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
@@ -131,5 +139,24 @@ struct DrawingCanvas: UIViewRepresentable {
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         toolPicker.setVisible(true, forFirstResponder: uiView)
         toolPicker.addObserver(uiView)
+    }
+}
+
+private func pastelBackgroundColor(for classification: String?) -> Color {
+    switch classification {
+        case "High Importance":
+            return Color(red: 1.0, green: 0.78, blue: 0.78) // Pastel red
+        case "Medium Importance":
+            return Color(red: 1.0, green: 0.92, blue: 0.78) // Pastel orange
+        case "Moderate Importance":
+            return Color(red: 1.0, green: 1.0, blue: 0.8)   // Pastel yellow
+        case "Low Importance":
+            return Color(red: 0.8, green: 1.0, blue: 0.8)   // Pastel green
+        case "Very Low Importance":
+            return Color(red: 0.8, green: 1.0, blue: 1.0)   // Pastel cyan
+        case "Negligible Importance":
+            return Color(red: 0.86, green: 0.86, blue: 1.0) // Pastel blue
+        default:
+            return Color(UIColor.secondarySystemBackground)
     }
 }

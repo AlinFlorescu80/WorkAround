@@ -62,20 +62,23 @@ struct KanbanBoardView: View {
                             ScrollView {
                                 VStack(spacing: 8) {
                                     ForEach($column.cards, id: \.id) { $card in
-                                        KanbanCardView(card: $card)
-                                            .onDrag {
-                                                let cardID = card.id.data(using: .utf8)
-                                                return NSItemProvider(item: cardID as NSData?, typeIdentifier: "public.text")
-                                            }
-                                            .contextMenu {
-                                                Button(role: .destructive) {
-                                                    if let idx = column.cards.firstIndex(where: { $0.id == card.id }) {
-                                                        column.cards.remove(at: idx)
-                                                    }
-                                                } label: {
-                                                    Label("Delete", systemImage: "trash")
+                                        KanbanCardView(
+                                            card: $card,
+                                            classification: viewModel.predictions[card.id].flatMap { viewModel.descriptiveText(for: $0) }
+                                        )
+                                        .onDrag {
+                                            let cardID = card.id.data(using: .utf8)
+                                            return NSItemProvider(item: cardID as NSData?, typeIdentifier: "public.text")
+                                        }
+                                        .contextMenu {
+                                            Button(role: .destructive) {
+                                                if let idx = column.cards.firstIndex(where: { $0.id == card.id }) {
+                                                    column.cards.remove(at: idx)
                                                 }
+                                            } label: {
+                                                Label("Delete", systemImage: "trash")
                                             }
+                                        }
                                     }
                                 }
                                 .padding()

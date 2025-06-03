@@ -108,24 +108,6 @@ class KanbanBoardViewModel: ObservableObject {
             DispatchQueue.main.async {
                 withAnimation {
                     self.predictions = newPredictions
-                        // ── Update each card title with its classification result ──
-                    for colIndex in self.columns.indices {
-                        for cardIndex in self.columns[colIndex].cards.indices {
-                            let cardID = self.columns[colIndex].cards[cardIndex].id
-                            guard let label = newPredictions[cardID] else { continue }
-                            
-                            let naturalLabel = self.descriptiveText(for: label)
-                            
-                                // Strip any previous classification suffix like " [DataValue(6)]"
-                            var baseTitle = self.columns[colIndex].cards[cardIndex].title
-                            if let range = baseTitle.range(of: #" \[[^\]]+\]$"#, options: .regularExpression) {
-                                baseTitle.removeSubrange(range)
-                            }
-                            
-                                // Append the latest classification
-                            self.columns[colIndex].cards[cardIndex].title = "\(baseTitle) [\(naturalLabel)]"
-                        }
-                    }
                 }
             }
         }
