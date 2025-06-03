@@ -30,8 +30,13 @@ struct KanbanBoardView: View {
                             
                             ScrollView {
                                 VStack(spacing: 8) {
-                                    ForEach(column.cards.indices, id: \ .self) { idx in
+                                    ForEach(column.cards.indices, id: \.self) { idx in
                                         KanbanCardView(card: $column.cards[idx])
+                                            .onDrag {
+                                                let cardID = column.cards[idx].id.data(using: .utf8)
+                                                return NSItemProvider(item: cardID as NSData?, typeIdentifier: "public.text")
+                                            }
+                                            // Remove the .onDrop from here!
                                     }
                                 }
                                 .padding()

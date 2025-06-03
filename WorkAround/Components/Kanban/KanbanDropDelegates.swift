@@ -58,26 +58,25 @@ struct ColumnDropDelegate: DropDelegate {
         itemProvider.loadItem(forTypeIdentifier: "public.text", options: nil) { data, error in
             DispatchQueue.main.async {
                 if let data = data as? Data,
-                   let idString = String(data: data, encoding: .utf8),
-                   let draggedCardID = UUID(uuidString: idString) {
-                    moveCard(with: draggedCardID)
+                   let idString = String(data: data, encoding: .utf8) {
+                        // Remove from source column and append to target
+                    for i in allColumns.indices {
+                        if let idx = allColumns[i].cards.firstIndex(where: { $0.id == idString }) {
+                            let card = allColumns[i].cards.remove(at: idx)
+                                // Avoid duplicates
+                            if !targetColumn.cards.contains(where: { $0.id == card.id }) {
+                                targetColumn.cards.append(card)
+                            }
+                            break
+                        }
+                    }
                 }
             }
         }
         return true
     }
     
-    private func moveCard(with draggedCardID: UUID) {
-        for i in allColumns.indices {
-            if let removeIndex = allColumns[i].cards.firstIndex(where: {UUID(uuidString: $0.id ?? "" ) == draggedCardID}) {
-                let movingCard = allColumns[i].cards.remove(at: removeIndex)
-                targetColumn.cards.append(movingCard)
-                break
-            }
-        }
-    }
-    
     func dropUpdated(info: DropInfo) -> DropProposal? {
-        return DropProposal(operation: .move)
+        DropProposal(operation: .move)
     }
 }
