@@ -1,7 +1,3 @@
-    // =============================================================
-    //  KanbanBoardView.swift — updated for AI task classification
-    // =============================================================
-
 import SwiftUI
 import FirebaseAuth
 
@@ -15,10 +11,45 @@ struct KanbanBoardView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-                // ────────────────────────────────────────────────────────────
-                //  Original board content
-                // ────────────────────────────────────────────────────────────
+        VStack(alignment: .trailing) {
+            HStack {
+                Spacer()
+                Button {
+                    showingInviteSheet = true
+                } label: {
+                    Label("Invite", systemImage: "person.crop.circle.badge.plus")
+                        .font(.body)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(Color.accentColor)
+                        .cornerRadius(8)
+                }
+                Button {
+                    showingChat = true
+                } label: {
+                    Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
+                        .font(.body)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(Color.accentColor)
+                        .cornerRadius(8)
+                }
+                Button {
+                    viewModel.classifyAllTasks()
+                } label: {
+                    Label("Classify with AI", systemImage: "star.fill")
+                        .font(.body)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(Color.accentColor)
+                        .cornerRadius(8)
+                }
+                .padding(.trailing, 12)
+                .accessibilityLabel("Run AI task classifier")
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
                     ForEach($viewModel.columns) { $column in
@@ -73,10 +104,9 @@ struct KanbanBoardView: View {
                         .cornerRadius(8)
                         .shadow(radius: 2)
                     }
-                    
                         //  Add‑column button
                     Button(action: {
-                        let nextOrder = (viewModel.columns.map(\ .order).max() ?? -1) + 1
+                        let nextOrder = (viewModel.columns.map(\.order).max() ?? -1) + 1
                         let newColumn = KanbanColumn(title: "New Column", cards: [], order: nextOrder)
                         withAnimation {
                             viewModel.columns.append(newColumn)
@@ -94,61 +124,9 @@ struct KanbanBoardView: View {
                         .cornerRadius(8)
                         .shadow(radius: 2)
                     }
-                    
-                        //  Invite Users button
-                    Button {
-                        showingInviteSheet = true
-                    } label: {
-                        VStack {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                                .resizable()
-                                .frame(width: 50, height: 50)
-                            Text("Invite")
-                                .font(.headline)
-                        }
-                        .frame(width: 250, height: 400)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(8)
-                        .shadow(radius: 2)
-                    }
-                    
-                        //  Chat button
-                    Button {
-                        showingChat = true
-                    } label: {
-                        VStack {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .resizable()
-                                .frame(width: 50, height: 50)
-                            Text("Chat")
-                                .font(.headline)
-                        }
-                        .frame(width: 250, height: 400)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(8)
-                        .shadow(radius: 2)
-                    }
                 }
                 .padding()
             }
-                // ────────────────────────────────────────────────────────────
-                //  ⭐️ AI‑classify button (top‑right overlay)
-                // ────────────────────────────────────────────────────────────
-            Button {
-                viewModel.classifyAllTasks()
-            } label: {
-                Image(systemName: "star.fill")
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-                    .padding(18)
-                    .background(
-                        Circle()
-                            .fill(Color.accentColor)
-                    )
-                    .shadow(radius: 4)
-            }
-            .padding()
-            .accessibilityLabel("Run AI task classifier")
         }
             //  Sheets & life‑cycle hooks remain unchanged
         .sheet(isPresented: $showingInviteSheet) {

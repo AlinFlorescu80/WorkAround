@@ -21,7 +21,11 @@ struct InviteUserView: View {
         NavigationStack {
             Form {
                 Section("User e‑mail") {
-                    TextField("email@example.com", text: $email)
+                    TextField("", text: $email)
+                        .placeholder(when: email.isEmpty) {
+                            Text("Enter email to invite")
+                                .foregroundColor(.secondary) // faded gray
+                        }
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                 }
@@ -60,6 +64,20 @@ struct InviteUserView: View {
             }
     }
 }
+
+extension View {
+    func placeholder<Content: View>(
+        when shouldShow: Bool,
+        alignment: Alignment = .leading,
+        @ViewBuilder placeholder: () -> Content
+    ) -> some View {
+        ZStack(alignment: alignment) {
+            placeholder().opacity(shouldShow ? 1 : 0)
+            self
+        }
+    }
+}
+
 #Preview {
     InviteUserView(boardID: "TEST")
 }
