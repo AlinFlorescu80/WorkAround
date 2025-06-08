@@ -10,6 +10,7 @@ import GoogleSignInSwift
 struct AuthenticateView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     @State private var showInitialView: Bool = true
     @State private var email: String = ""
@@ -19,6 +20,9 @@ struct AuthenticateView: View {
     @State private var errorMessage: String?
     @State private var isEmailEmpty: Bool = false
     @State private var isPasswordEmpty: Bool = false
+    @State private var isEmailInvalid: Bool = false
+    @State private var isSigningUp: Bool = false
+    @Namespace private var logoNamespace
     
     var body: some View {
         
@@ -30,20 +34,32 @@ struct AuthenticateView: View {
                     
                     Image("WorkAroundIcon")
                         .resizable()
-                        .frame(width: 250, height: 250)
+                        .matchedGeometryEffect(id: "logo", in: logoNamespace)
+                        .frame(
+                            width: horizontalSizeClass == .regular ? 400 : 250,
+                            height: horizontalSizeClass == .regular ? 400 : 250
+                        )
                     
-                    Spacer()
+                    
                     
                     if showInitialView
                     {
+                        Spacer()
+                        Text("Welcome to WorkAround!")
+                            .font(.system(size: 40, weight: .heavy, design: .rounded))
+                        Spacer()
                         
                         Button {
-                            withAnimation(.bouncy) {
+                            withAnimation(.default) {
+                                isSigningUp = false
                                 showInitialView.toggle()
                             }
                         } label: {
                             Text("Sign in")
-                                .frame(width: 250, height: 50)
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .background(Color.blue)
                                 .foregroundColor(.white)
@@ -53,10 +69,16 @@ struct AuthenticateView: View {
                         
                         
                         Button {
-                            
+                            withAnimation(.bouncy) {
+                                isSigningUp = true
+                                showInitialView.toggle()
+                            }
                         } label: {
                             Text("Sign Up")
-                                .frame(width: 250, height: 50)
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .foregroundColor(.blue)
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
@@ -65,67 +87,79 @@ struct AuthenticateView: View {
                         .padding(.bottom)
                         
                         
-                        Button {
-                            
-                        } label: {
-                            Text("Continue without an account...")
-                                .frame(width: 250, height: 50)
-                                .contentShape(Rectangle())
-                                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-                                .cornerRadius(8)
-                        }
                         
                         Spacer()
                     }
                     
                     else {
                         TextField("Mail", text: $email)
-                            .frame(width: 250)
+                            .frame(maxWidth: horizontalSizeClass == .regular ? 400 : 250)
                             .keyboardType(.emailAddress)
                             .textFieldStyle(.roundedBorder)
                             .autocapitalization(.none)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(isEmailEmpty ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
+                                    .stroke((isEmailEmpty || isEmailInvalid) ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
                             )
+                            .padding(.top)
+                        
                         
                         SecureField("Password", text: $password)
-                            .frame(width: 250)
+                            .frame(maxWidth: horizontalSizeClass == .regular ? 400 : 250)
                             .textFieldStyle(.roundedBorder)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(isPasswordEmpty ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
                             )
                         
+                        
                         Button {
                                 // Validate fields
                             isEmailEmpty = email.isEmpty
                             isPasswordEmpty = password.isEmpty
                             guard !isEmailEmpty && !isPasswordEmpty else { return }
+                                // Validate email format
+                            let emailPattern = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+                            let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailPattern)
+                            isEmailInvalid = !emailPredicate.evaluate(with: email)
+                            if isEmailInvalid {
+                                errorMessage = "Please enter a valid email address."
+                                return
+                            }
                             
-                            Auth.auth().signIn(withEmail: email, password: password)
-                            {
-                                authResult,
-                                error in
-                                if let error = error
-                                {
-                                    errorMessage = "Sign in failed: \(error.localizedDescription)"
+                            if isSigningUp {
+                                Auth.auth().createUser(withEmail: email, password: password) { authResult, error in
+                                    if let error = error {
+                                        errorMessage = "Sign up failed: \(error.localizedDescription)"
+                                    } else {
+                                        errorMessage = nil
+                                        showLoadingView = false
+                                        withAnimation(.bouncy) {
+                                            navigateToHome = true
+                                            authManager.isSignedIn = true
+                                        }
+                                    }
                                 }
-                                else
-                                {
-                                    errorMessage = nil
-                                    print("User signed in successfully: \(authResult!.user)!!!!!!!!!!!!!!!!")
-                                    showLoadingView = false
-                                    withAnimation(.bouncy)
-                                    {
-                                        navigateToHome = true
-                                        authManager.isSignedIn = true
+                            } else {
+                                Auth.auth().signIn(withEmail: email, password: password) { authResult, error in
+                                    if let error = error {
+                                        errorMessage = "Sign in failed: \(error.localizedDescription)"
+                                    } else {
+                                        errorMessage = nil
+                                        showLoadingView = false
+                                        withAnimation(.bouncy) {
+                                            navigateToHome = true
+                                            authManager.isSignedIn = true
+                                        }
                                     }
                                 }
                             }
                         } label: {
-                            Text("Sign in with Email")
-                                .frame(width: 250, height: 50)
+                            Text(isSigningUp ? "Sign up with Email" : "Sign in with Email")
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .background(Color.blue)
                                 .foregroundColor(.white)
@@ -147,7 +181,10 @@ struct AuthenticateView: View {
                         } label: {
                             Text("Sign in with Google")
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
-                                .frame(width: 250, height: 50)
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .cornerRadius(8)
                                 .background(alignment: .leading) {
@@ -190,31 +227,26 @@ struct AuthenticateView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
-            .overlay(
-                Group {
+            .navigationDestination(isPresented: $navigateToHome)
+            {
+                HomeView(logoNamespace: logoNamespace, showLoadingView: false)
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
                     if !showInitialView {
                         Button(action: {
                             withAnimation(.bouncy) {
                                 showInitialView = true
+                                isSigningUp = false
                             }
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.left")
                                 Text("Back")
                             }
-                            .padding(8)
-                            .background(Color.white.opacity(0.8))
-                            .cornerRadius(8)
                         }
-                        .padding(.top, 10)
-                        .padding(.leading, 10)
                     }
-                },
-                alignment: .topLeading
-            )
-            .navigationDestination(isPresented: $navigateToHome)
-            {
-                HomeView(showLoadingView: false)
+                }
             }
         }
         
@@ -273,7 +305,6 @@ extension AuthenticateView {
             return false
         }
         
-        return false
         
         
     }

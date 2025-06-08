@@ -85,7 +85,8 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 @main
 struct WorkAroundApp: App {
     @StateObject var authManager = AuthManager()
-    
+    @Namespace private var logoNamespace
+
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([ Item.self ])
@@ -102,7 +103,7 @@ struct WorkAroundApp: App {
             Group {
                 if Auth.auth().currentUser != nil {
                         // User is already signed in
-                    HomeView(showLoadingView: false)     // Replace with your app's main content view
+                    HomeView(logoNamespace: logoNamespace, showLoadingView: false)     // Replace with your app's main content view
                 } else {
                         // User is not signed in
                     AuthenticateView()

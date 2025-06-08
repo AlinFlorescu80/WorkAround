@@ -5,21 +5,54 @@
     //  Created by Alin Florescu on 18.02.2025.
     //
 
+
 import SwiftUI
 import Firebase
 import FirebaseAuth
 import FirebaseFirestore
 import PhotosUI
 import FirebaseStorage
+import UIKit
 
-    /// Simple model fo  r listing boards with title and optional photo.
+    // SplashView with pulsing and expand/fade animation for WorkAroundIcon
+struct SplashView: View {
+    var namespace: Namespace.ID
+    @State private var scale: CGFloat = 1.0
+    @State private var opacity: Double = 1.0
+    var body: some View {
+        Image("WorkAroundIcon")
+            .resizable()
+            .matchedGeometryEffect(id: "logo", in: namespace)
+            .scaledToFit()
+            .frame(width: 120, height: 120)
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .onAppear {
+                    // Pulse four times
+                withAnimation(Animation.easeInOut(duration: 0.6).repeatCount(4, autoreverses: true)) {
+                    scale = 1.2
+                }
+                    // After pulses, expand and fade away
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        scale = 25.0
+                        opacity = 0.0
+                    }
+                }
+            }
+    }
+}
+
+    /// Simple model for listing boards with title, optional description, and optional photo.
 private struct BoardInfo: Identifiable {
     let id: String
     let title: String
+    let description: String?
     let photoURL: String?
 }
 
 struct HomeView: View {
+    let logoNamespace: Namespace.ID
         // MARK: – Environment
     @EnvironmentObject var authManager: AuthManager
     
@@ -27,9 +60,13 @@ struct HomeView: View {
     @State private var searchText           = ""
     @State private var isLoading            = true
     @State private var showProfileSheet     = false
-    @State private var navigateToAuth       = false
+        //    @State private var navigateToAuth       = false
     @State var showLoadingView: Bool
     @State private var showingNewBoardSheet = false
+    @State private var editingBoard: BoardInfo?
+    
+        /// Controls whether the splash is visible
+    @State private var showSplash: Bool = true
     
         // MARK: – Board Data
     @State private var boards: [BoardInfo] = []      // user’s boards with metadata
@@ -38,38 +75,116 @@ struct HomeView: View {
         // MARK: – Body
     var body: some View {
         ZStack {
+                // Main dashboard, hidden until splash finishes
             dashboard
-                .opacity(showLoadingView ? 0 : 1)
-                .animation(.easeIn(duration: 0.5), value: showLoadingView)
+                .opacity(showSplash ? 0 : 1)
+                .animation(.easeInOut, value: showSplash)
             
-            if showLoadingView {
-                NaturalLoadingView(isLoading: $isLoading) {
-                    showLoadingView = false
+                // Splash animation overlay
+            if showSplash {
+                SplashView(namespace: logoNamespace)
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .onAppear {
+                // Always play splash on launch
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.9) {
+                withAnimation(.easeInOut) {
+                    showSplash = false
                 }
             }
         }
+            // Existing lifecycle modifiers unchanged
         .task { await loadBoards() }      // fetch board list on appear
         .onAppear {
+                // Redirect to sign‑in if not authenticated
+                //            if !authManager.isSignedIn {
+                //                navigateToAuth = true
+                //                return
+                //            }
                 // Fake splash‑screen delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 withAnimation { isLoading = false }
             }
         }
+            //        .onChange(of: authManager.isSignedIn) { signedIn in
+            //                // Navigate back to sign‑in screen when signing out
+            //            if !signedIn {
+            //                navigateToAuth = true
+            //            }
+            //        }
+            // Present authentication modally if not signed in
+            //        .fullScreenCover(isPresented: $navigateToAuth) {
+            //            AuthenticateView()
+            //                .environmentObject(authManager)
+            //        }
     }
     
         // MARK: – Dashboard (boards)
     private var dashboard: some View {
         NavigationStack {
             List {
-                    // Boards section
                 Section("My Boards") {
                     ForEach(filteredBoards) { board in
-                        NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
-                            Text(board.title)
+                        ZStack {
+                                // Visible row content
+                            HStack(alignment: .center) {
+                                    // Title + optional description on the left
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(board.title)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    
+                                    if let desc = board.description, !desc.isEmpty {
+                                        Text(desc)
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                
+                                Spacer(minLength: 12)
+                                
+                                    // Chevron icon on the right
+                                Image(systemName: "chevron.right")
+                                    .imageScale(.small)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color(uiColor: .secondarySystemBackground))
+                            )
+                            
+                                // Invisible NavigationLink overlay (no chevron)
+                            NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
+                                EmptyView()
+                            }
+                            .opacity(0)                // hide link label & chevron
                         }
+                        .contextMenu {
+                            Button {
+                                editingBoard = board
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                Task { await deleteBoard(board) }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .padding(.horizontal)
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("Home")
             .navigationBarBackButtonHidden(true)
             .toolbar {
@@ -83,9 +198,6 @@ struct HomeView: View {
                 }
                     // Trailing: auth/profile
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    if !authManager.isSignedIn {
-                        Button("Sign In") { navigateToAuth = true }
-                    }
                     Button { showProfileSheet = true } label: {
                         Image(systemName: "person.circle")
                             .resizable()
@@ -102,12 +214,59 @@ struct HomeView: View {
                     }
                 }
             }
-                // Hidden link for programmatic sign-in navigation
-            NavigationLink(
-                destination: AuthenticateView().environmentObject(authManager),
-                isActive: $navigateToAuth
-            ) { EmptyView() }
-                .hidden()
+            .sheet(item: $editingBoard) { board in
+                EditBoardSheet(board: board) { newTitle, newDesc in
+                    Task {
+                        await updateBoard(boardID: board.id, title: newTitle, description: newDesc)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func deleteBoard(_ board: BoardInfo) async {
+        do {
+            try await db.collection("boards").document(board.id).delete()
+            if let uid = Auth.auth().currentUser?.uid {
+                try await db.collection("users")
+                    .document(uid)
+                    .collection("boards")
+                    .document(board.id)
+                    .delete()
+            }
+            DispatchQueue.main.async {
+                boards.removeAll { $0.id == board.id }
+            }
+        } catch {
+            print("Failed to delete board:", error)
+        }
+    }
+    
+    private func updateBoard(boardID: String, title: String, description: String?) async {
+        do {
+            var data: [String: Any] = ["title": title]
+            if let desc = description { data["description"] = desc }
+            try await db.collection("boards").document(boardID).updateData(data)
+            if let uid = Auth.auth().currentUser?.uid {
+                try await db.collection("users")
+                    .document(uid)
+                    .collection("boards")
+                    .document(boardID)
+                    .updateData([
+                        "title": title,
+                        "description": description ?? FieldValue.delete()
+                    ])
+            }
+            DispatchQueue.main.async {
+                if let idx = boards.firstIndex(where: { $0.id == boardID }) {
+                    boards[idx] = BoardInfo(id: boardID,
+                                            title: title,
+                                            description: description ?? boards[idx].description,
+                                            photoURL: boards[idx].photoURL)
+                }
+            }
+        } catch {
+            print("Failed to update board:", error)
         }
     }
     
@@ -128,8 +287,12 @@ struct HomeView: View {
             for doc in ownedSnap.documents {
                 let data = doc.data()
                 guard let title = data["title"] as? String else { continue }
+                let desc = data["description"] as? String
                 let photoURL = data["photoURL"] as? String
-                newBoards.append(BoardInfo(id: doc.documentID, title: title, photoURL: photoURL))
+                newBoards.append(BoardInfo(id: doc.documentID,
+                                           title: title,
+                                           description: desc,
+                                           photoURL: photoURL))
             }
             
                 // 2. Fetch invited boards from root collection
@@ -143,8 +306,12 @@ struct HomeView: View {
                 guard !newBoards.contains(where: { $0.id == boardID }) else { continue }
                 let data = doc.data()
                 guard let title = data["title"] as? String else { continue }
+                let desc = data["description"] as? String
                 let photoURL = data["photoURL"] as? String
-                newBoards.append(BoardInfo(id: boardID, title: title, photoURL: photoURL))
+                newBoards.append(BoardInfo(id: boardID,
+                                           title: title,
+                                           description: desc,
+                                           photoURL: photoURL))
             }
             
                 // Update on main thread
@@ -179,9 +346,9 @@ struct HomeView: View {
                 // 2️⃣ Create default columns
             let columnsRef = newRef.collection("columns")
             let defaultCols: [[String: Any]] = [
-                ["localId": UUID().uuidString, "title": "To Do",       "cards": [], "order": 0],
-                ["localId": UUID().uuidString, "title": "In Progress","cards": [], "order": 1],
-                ["localId": UUID().uuidString, "title": "Done",        "cards": [], "order": 2]
+                ["localId": UUID().uuidString, "title": "To Do",        "cards": [], "order": 0],
+                ["localId": UUID().uuidString, "title": "In Progress",  "cards": [], "order": 1],
+                ["localId": UUID().uuidString, "title": "Done",         "cards": [], "order": 2]
             ]
             for colData in defaultCols {
                 let colDoc = columnsRef.document()
@@ -204,9 +371,8 @@ struct HomeView: View {
                 "created": FieldValue.serverTimestamp(),
                 "title": title
             ]
-            if let imageURL = image {
-                    // store photo URL if you saved one
-                    // userBoardData["photoURL"] = ...
+            if let description {
+                userBoardData["description"] = description
             }
             try await db
                 .collection("users")
@@ -216,8 +382,14 @@ struct HomeView: View {
                 .setData(userBoardData)
             
                 // 5️⃣ Update local list and navigate
-            boards.append(BoardInfo(id: boardID, title: title, photoURL: nil))
-            registerBoardListeners([BoardInfo(id: boardID, title: title, photoURL: nil)])
+            boards.append(BoardInfo(id: boardID,
+                                    title: title,
+                                    description: description,
+                                    photoURL: nil))
+            registerBoardListeners([BoardInfo(id: boardID,
+                                              title: title,
+                                              description: description,
+                                              photoURL: nil)])
                 // Immediate navigation is handled by the direct NavigationLink
         } catch {
             print("Failed to create board:", error)
@@ -254,31 +426,31 @@ private struct NewBoardSheet: View {
                 Section("Description") {
                     TextField("Enter description (optional)", text: $description)
                 }
-                Section("Photo") {
-                    PhotosPicker(selection: $photoItem,
-                                 matching: .images,
-                                 photoLibrary: .shared()) {
-                        HStack {
-                            Label("Choose Photo", systemImage: "photo")
-                            Spacer()
-                            if let data = imageData,
-                               let uiImage = UIImage(data: data) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 60, height: 60)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                            }
-                        }
-                    }
-                                 .onChange(of: photoItem) { item in
-                                     Task {
-                                         if let data = try? await item?.loadTransferable(type: Data.self) {
-                                             imageData = data
-                                         }
-                                     }
-                                 }
-                }
+                    //                Section("Photo") {
+                    //                    PhotosPicker(selection: $photoItem,
+                    //                                 matching: .images,
+                    //                                 photoLibrary: .shared()) {
+                    //                        HStack {
+                    //                            Label("Choose Photo", systemImage: "photo")
+                    //                            Spacer()
+                    //                            if let data = imageData,
+                    //                               let uiImage = UIImage(data: data) {
+                    //                                Image(uiImage: uiImage)
+                    //                                    .resizable()
+                    //                                    .scaledToFit()
+                    //                                    .frame(width: 60, height: 60)
+                    //                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    //                            }
+                    //                        }
+                    //                    }
+                    //                                 .onChange(of: photoItem) { item in
+                    //                                     Task {
+                    //                                         if let data = try? await item?.loadTransferable(type: Data.self) {
+                    //                                             imageData = data
+                    //                                         }
+                    //                                     }
+                    //                                 }
+                    //                }
             }
             .navigationTitle("New Board")
             .toolbar {
@@ -301,9 +473,52 @@ private struct NewBoardSheet: View {
         }
     }
 }
-    //    
+    //
     //    #Preview {
     //        HomeView(showLoadingView: true)
     //            .environmentObject(AuthManager())
     //    }
     // REMINDER: AM SI ANIMATIE CA LA TWITTER AICI!!!!
+
+private struct EditBoardSheet: View {
+    @Environment(\.dismiss) var dismiss
+    
+    var board: BoardInfo
+    @State private var title: String
+    @State private var description: String
+    var onSave: (String, String?) -> Void
+    
+    init(board: BoardInfo, onSave: @escaping (String, String?) -> Void) {
+        self.board = board
+        _title = State(initialValue: board.title)
+        _description = State(initialValue: board.description ?? "")
+        self.onSave = onSave
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Title *") {
+                    TextField("Enter board title", text: $title)
+                }
+                Section("Description") {
+                    TextField("Enter description (optional)", text: $description)
+                }
+            }
+            .navigationTitle("Edit Board")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(title.trimmingCharacters(in: .whitespaces),
+                               description.isEmpty ? nil : description)
+                        dismiss()
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+}

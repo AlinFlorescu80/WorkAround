@@ -13,6 +13,10 @@ class KanbanBoardViewModel: ObservableObject {
     @Published var columns: [KanbanColumn] = []
     @Published var predictions: [String: String] = [:]   // card-id → importance label
     
+        /// All users who can be assigned to tasks (owner + invited)
+    @Published var invitedUsers: [String] = []
+    @Published var boardTitle: String = ""
+    
     private let db = Firestore.firestore()
     let boardID: String
     
@@ -28,7 +32,22 @@ class KanbanBoardViewModel: ObservableObject {
         //  MARK: – Lifecycle
     init(boardID: String) {
         self.boardID = boardID
+        fetchInvitedUsers()
         fetchColumns()
+        fetchBoardTitle()
+    }
+        /// Fetches the board title from Firestore and stores it in `boardTitle`
+    private func fetchBoardTitle() {
+        db.collection("boards").document(boardID).getDocument { snapshot, error in
+            if let data = snapshot?.data(),
+               let title = data["title"] as? String {
+                DispatchQueue.main.async {
+                    self.boardTitle = title
+                }
+            } else if let error = error {
+                print("Error fetching board title: \(error.localizedDescription)")
+            }
+        }
     }
     
         //  MARK: – Networking / data
@@ -70,6 +89,22 @@ class KanbanBoardViewModel: ObservableObject {
             print("Error saving column: \(error.localizedDescription)")
         }
     }
+    
+        /// Deletes a column document from Firestore
+    func deleteColumn(_ column: KanbanColumn) {
+        guard let columnID = column.firestoreId else { return }
+        db
+            .collection("boards")
+            .document(boardID)
+            .collection("columns")
+            .document(columnID)
+            .delete { error in
+                if let error = error {
+                    print("Error deleting column: \(error.localizedDescription)")
+                }
+            }
+    }
+    
     func descriptiveText(for label: String) -> String {
         switch label {
             case "DataValue(6)":
@@ -108,25 +143,44 @@ class KanbanBoardViewModel: ObservableObject {
             DispatchQueue.main.async {
                 withAnimation {
                     self.predictions = newPredictions
-                        // ── Update each card title with its classification result ──
-                    for colIndex in self.columns.indices {
-                        for cardIndex in self.columns[colIndex].cards.indices {
-                            let cardID = self.columns[colIndex].cards[cardIndex].id
-                            guard let label = newPredictions[cardID] else { continue }
-                            
-                            let naturalLabel = self.descriptiveText(for: label)
-                            
-                                // Strip any previous classification suffix like " [DataValue(6)]"
-                            var baseTitle = self.columns[colIndex].cards[cardIndex].title
-                            if let range = baseTitle.range(of: #" \[[^\]]+\]$"#, options: .regularExpression) {
-                                baseTitle.removeSubrange(range)
-                            }
-                            
-                                // Append the latest classification
-                            self.columns[colIndex].cards[cardIndex].title = "\(baseTitle) [\(naturalLabel)]"
-                        }
-                    }
                 }
+            }
+        }
+    }
+    
+        /// Fetch the list of invited users (including owner) from the board document
+    func fetchInvitedUsers() {
+        db.collection("boards").document(boardID)
+            .addSnapshotListener { snapshot, error in
+                guard let data = snapshot?.data(),
+                      let invited = data["invited"] as? [String] else { return }
+                    // Include the owner’s email
+                let ownerEmail = Auth.auth().currentUser?.email
+                let all = invited + [ownerEmail].compactMap { $0 }
+                DispatchQueue.main.async {
+                    self.invitedUsers = Array(Set(all))
+                }
+            }
+    }
+    
+        /// Add an assignee to a specific card and save the containing column
+    func addAssignee(_ userEmail: String, toCardID cardID: String) {
+        for index in columns.indices {
+            if let cardIndex = columns[index].cards.firstIndex(where: { $0.id == cardID }) {
+                columns[index].cards[cardIndex].assignees.append(userEmail)
+                saveColumn(columns[index])
+                break
+            }
+        }
+    }
+    
+        /// Remove an assignee from a specific card and save the containing column
+    func removeAssignee(_ userEmail: String, fromCardID cardID: String) {
+        for index in columns.indices {
+            if let cardIndex = columns[index].cards.firstIndex(where: { $0.id == cardID }) {
+                columns[index].cards[cardIndex].assignees.removeAll(where: { $0 == userEmail })
+                saveColumn(columns[index])
+                break
             }
         }
     }

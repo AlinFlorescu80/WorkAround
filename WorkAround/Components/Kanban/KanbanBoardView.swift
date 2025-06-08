@@ -1,7 +1,3 @@
-    // =============================================================
-    //  KanbanBoardView.swift — updated for AI task classification
-    // =============================================================
-
 import SwiftUI
 import FirebaseAuth
 
@@ -9,16 +5,53 @@ struct KanbanBoardView: View {
     @StateObject private var viewModel: KanbanBoardViewModel
     @State private var showingInviteSheet = false
     @State private var showingChat = false
+    let userEmail = Auth.auth().currentUser?.email
     
     init(boardID: String) {
         _viewModel = StateObject(wrappedValue: KanbanBoardViewModel(boardID: boardID))
     }
     
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-                // ────────────────────────────────────────────────────────────
-                //  Original board content
-                // ────────────────────────────────────────────────────────────
+        VStack(alignment: .trailing) {
+            HStack {
+                Spacer()
+                Button {
+                    showingInviteSheet = true
+                } label: {
+                    Label("Invite", systemImage: "person.crop.circle.badge.plus")
+                        .font(.body)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(Color.accentColor)
+                        .cornerRadius(8)
+                }
+                Button {
+                    showingChat = true
+                } label: {
+                    Label("Chat", systemImage: "bubble.left.and.bubble.right.fill")
+                        .font(.body)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(Color.accentColor)
+                        .cornerRadius(8)
+                }
+                Button {
+                    viewModel.classifyAllTasks()
+                } label: {
+                    Label("Classify with AI", systemImage: "star.fill")
+                        .font(.body)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.accentColor.opacity(0.1))
+                        .foregroundColor(Color.accentColor)
+                        .cornerRadius(8)
+                        .lineLimit(1)
+                }
+                .padding(.trailing, 12)
+                .accessibilityLabel("Run AI task classifier")
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 16) {
                     ForEach($viewModel.columns) { $column in
@@ -30,8 +63,42 @@ struct KanbanBoardView: View {
                             
                             ScrollView {
                                 VStack(spacing: 8) {
-                                    ForEach(column.cards.indices, id: \ .self) { idx in
-                                        KanbanCardView(card: $column.cards[idx])
+                                    ForEach($column.cards, id: \.id) { $card in
+                                        KanbanCardView(
+                                            card: $card,
+                                            classification: viewModel.predictions[card.id].flatMap { viewModel.descriptiveText(for: $0) }
+                                        )
+                                        .onDrag {
+                                            let cardID = card.id.data(using: .utf8)
+                                            return NSItemProvider(item: cardID as NSData?, typeIdentifier: "public.text")
+                                        }
+                                        .contextMenu {
+                                            Menu("Add assignee") {
+                                                ForEach(viewModel.invitedUsers.filter { !card.assignees.contains($0) }, id: \.self) { user in
+                                                    Button(user) {
+                                                        viewModel.addAssignee(user, toCardID: card.id)
+                                                    }
+                                                }
+                                            }
+                                                // Only show remove menu when there are assignees
+                                            if !card.assignees.isEmpty {
+                                                Menu("Remove assignee") {
+                                                    ForEach(card.assignees, id: \.self) { user in
+                                                        Button(user) {
+                                                            viewModel.removeAssignee(user, fromCardID: card.id)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            Divider()
+                                            Button(role: .destructive) {
+                                                if let idx = column.cards.firstIndex(where: { $0.id == card.id }) {
+                                                    column.cards.remove(at: idx)
+                                                }
+                                            } label: {
+                                                Label("Delete Card", systemImage: "trash")
+                                            }
+                                        }
                                     }
                                 }
                                 .padding()
@@ -59,11 +126,21 @@ struct KanbanBoardView: View {
                         .background(Color(UIColor.systemBackground))
                         .cornerRadius(8)
                         .shadow(radius: 2)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                if let index = viewModel.columns.firstIndex(where: { $0.id == column.id }) {
+                                    let columnToDelete = viewModel.columns[index]
+                                    viewModel.deleteColumn(columnToDelete)
+                                    viewModel.columns.remove(at: index)
+                                }
+                            } label: {
+                                Label("Delete Column", systemImage: "trash")
+                            }
+                        }
                     }
-                    
                         //  Add‑column button
                     Button(action: {
-                        let nextOrder = (viewModel.columns.map(\ .order).max() ?? -1) + 1
+                        let nextOrder = (viewModel.columns.map(\.order).max() ?? -1) + 1
                         let newColumn = KanbanColumn(title: "New Column", cards: [], order: nextOrder)
                         withAnimation {
                             viewModel.columns.append(newColumn)
@@ -81,61 +158,9 @@ struct KanbanBoardView: View {
                         .cornerRadius(8)
                         .shadow(radius: 2)
                     }
-                    
-                        //  Invite Users button
-                    Button {
-                        showingInviteSheet = true
-                    } label: {
-                        VStack {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                                .resizable()
-                                .frame(width: 50, height: 50)
-                            Text("Invite")
-                                .font(.headline)
-                        }
-                        .frame(width: 250, height: 400)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(8)
-                        .shadow(radius: 2)
-                    }
-                    
-                        //  Chat button
-                    Button {
-                        showingChat = true
-                    } label: {
-                        VStack {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .resizable()
-                                .frame(width: 50, height: 50)
-                            Text("Chat")
-                                .font(.headline)
-                        }
-                        .frame(width: 250, height: 400)
-                        .background(Color(UIColor.secondarySystemBackground))
-                        .cornerRadius(8)
-                        .shadow(radius: 2)
-                    }
                 }
                 .padding()
             }
-                // ────────────────────────────────────────────────────────────
-                //  ⭐️ AI‑classify button (top‑right overlay)
-                // ────────────────────────────────────────────────────────────
-            Button {
-                viewModel.classifyAllTasks()
-            } label: {
-                Image(systemName: "star.fill")
-                    .font(.title2.bold())
-                    .foregroundColor(.white)
-                    .padding(18)
-                    .background(
-                        Circle()
-                            .fill(Color.accentColor)
-                    )
-                    .shadow(radius: 4)
-            }
-            .padding()
-            .accessibilityLabel("Run AI task classifier")
         }
             //  Sheets & life‑cycle hooks remain unchanged
         .sheet(isPresented: $showingInviteSheet) {
@@ -151,5 +176,7 @@ struct KanbanBoardView: View {
                 viewModel.saveColumn(col)
             }
         }
+        .navigationTitle(viewModel.boardTitle)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

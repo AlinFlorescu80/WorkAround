@@ -5,10 +5,12 @@ import FirebaseFirestore
 
 struct KanbanCardView: View {
     @Binding var card: KanbanCard
+    var classification: String? = nil
     @State private var showingDrawing = false
     @State private var canvas = PKCanvasView()
     
     private let db = Firestore.firestore()
+    private let assigneeColumns = [GridItem(.adaptive(minimum: 80), spacing: 4)]
     
         /// Loads an existing drawing from disk into the canvas when editing.
     private func loadDrawing() {
@@ -42,13 +44,15 @@ struct KanbanCardView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Title", text: $card.title)
+            TextField("Title", text: $card.title, axis: .vertical)
+                .lineLimit(3)
                 .font(.headline)
-                .textFieldStyle(PlainTextFieldStyle())
+                .background(pastelBackgroundColor(for: classification))
             
-            TextField("Details", text: $card.details)
+            TextField("Details", text: $card.details, axis: .vertical)
+                .lineLimit(3)
                 .font(.subheadline)
-                .textFieldStyle(PlainTextFieldStyle())
+                .background(pastelBackgroundColor(for: classification))
             
             Button("Draw") {
                 showingDrawing = true
@@ -56,7 +60,7 @@ struct KanbanCardView: View {
             .padding(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.blue, lineWidth: 1)
+                    .stroke(Color.accentColor, lineWidth: 1)
             )
             .sheet(isPresented: $showingDrawing) {
                 NavigationView {
@@ -102,10 +106,34 @@ struct KanbanCardView: View {
                         }
                     }
             }
+            if let classification = classification {
+                Text(classification)
+                    .font(.caption)
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.gray)
+            }
+                // Show assigned users
+            if !card.assignees.isEmpty {
+                LazyVGrid(columns: assigneeColumns, alignment: .leading, spacing: 4) {
+                    ForEach(card.assignees, id: \.self) { assignee in
+                        Text(assignee)
+                            .font(.caption2)
+                            .padding(4)
+                            .background(Color.accentColor.opacity(0.2))
+                            .cornerRadius(4)
+                    }
+                }
+                .padding(.top, 8)
+            }
         }
         .padding()
-        .background(Color.white)
+        .background(pastelBackgroundColor(for: classification))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(UIColor.separator), lineWidth: 1)
+        )
         .shadow(radius: 2)
     }
 }
@@ -127,5 +155,24 @@ struct DrawingCanvas: UIViewRepresentable {
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         toolPicker.setVisible(true, forFirstResponder: uiView)
         toolPicker.addObserver(uiView)
+    }
+}
+
+private func pastelBackgroundColor(for classification: String?) -> Color {
+    switch classification {
+        case "High Importance":
+            return Color(red: 1.0, green: 0.78, blue: 0.78) // Pastel red
+        case "Medium Importance":
+            return Color(red: 1.0, green: 0.92, blue: 0.78) // Pastel orange
+        case "Moderate Importance":
+            return Color(red: 1.0, green: 1.0, blue: 0.8)   // Pastel yellow
+        case "Low Importance":
+            return Color(red: 0.8, green: 1.0, blue: 0.8)   // Pastel green
+        case "Very Low Importance":
+            return Color(red: 0.8, green: 1.0, blue: 1.0)   // Pastel cyan
+        case "Negligible Importance":
+            return Color(red: 0.86, green: 0.86, blue: 1.0) // Pastel blue
+        default:
+            return Color(UIColor.secondarySystemBackground)
     }
 }
