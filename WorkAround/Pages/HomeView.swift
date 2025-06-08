@@ -381,31 +381,31 @@ private struct NewBoardSheet: View {
                 Section("Description") {
                     TextField("Enter description (optional)", text: $description)
                 }
-                Section("Photo") {
-                    PhotosPicker(selection: $photoItem,
-                                 matching: .images,
-                                 photoLibrary: .shared()) {
-                        HStack {
-                            Label("Choose Photo", systemImage: "photo")
-                            Spacer()
-                            if let data = imageData,
-                               let uiImage = UIImage(data: data) {
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 60, height: 60)
-                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                            }
-                        }
-                    }
-                                 .onChange(of: photoItem) { item in
-                                     Task {
-                                         if let data = try? await item?.loadTransferable(type: Data.self) {
-                                             imageData = data
-                                         }
-                                     }
-                                 }
-                }
+//                Section("Photo") {
+//                    PhotosPicker(selection: $photoItem,
+//                                 matching: .images,
+//                                 photoLibrary: .shared()) {
+//                        HStack {
+//                            Label("Choose Photo", systemImage: "photo")
+//                            Spacer()
+//                            if let data = imageData,
+//                               let uiImage = UIImage(data: data) {
+//                                Image(uiImage: uiImage)
+//                                    .resizable()
+//                                    .scaledToFit()
+//                                    .frame(width: 60, height: 60)
+//                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+//                            }
+//                        }
+//                    }
+//                                 .onChange(of: photoItem) { item in
+//                                     Task {
+//                                         if let data = try? await item?.loadTransferable(type: Data.self) {
+//                                             imageData = data
+//                                         }
+//                                     }
+//                                 }
+//                }
             }
             .navigationTitle("New Board")
             .toolbar {

@@ -70,6 +70,22 @@ class KanbanBoardViewModel: ObservableObject {
             print("Error saving column: \(error.localizedDescription)")
         }
     }
+    
+        /// Deletes a column document from Firestore
+    func deleteColumn(_ column: KanbanColumn) {
+        guard let columnID = column.firestoreId else { return }
+        db
+            .collection("boards")
+            .document(boardID)
+            .collection("columns")
+            .document(columnID)
+            .delete { error in
+                if let error = error {
+                    print("Error deleting column: \(error.localizedDescription)")
+                }
+            }
+    }
+    
     func descriptiveText(for label: String) -> String {
         switch label {
             case "DataValue(6)":

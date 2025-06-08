@@ -107,6 +107,17 @@ struct KanbanBoardView: View {
                         .background(Color(UIColor.systemBackground))
                         .cornerRadius(8)
                         .shadow(radius: 2)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                if let index = viewModel.columns.firstIndex(where: { $0.id == column.id }) {
+                                    let columnToDelete = viewModel.columns[index]
+                                    viewModel.deleteColumn(columnToDelete)
+                                    viewModel.columns.remove(at: index)
+                                }
+                            } label: {
+                                Label("Delete Column", systemImage: "trash")
+                            }
+                        }
                     }
                         //  Add‑column button
                     Button(action: {
