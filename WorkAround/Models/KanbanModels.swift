@@ -15,6 +15,9 @@ struct KanbanCard: Identifiable, Codable {
         /// URL of the saved PencilKit drawing
     var drawingURL: String?
     
+        /// Users assigned to this card
+    var assignees: [String] = []
+    
         /// SwiftUI uses this as the stable identifier.
     var id: String { firestoreId ?? localId }
     
@@ -23,13 +26,15 @@ struct KanbanCard: Identifiable, Codable {
         localId: String = UUID().uuidString,
         title: String,
         details: String,
-        drawingURL: String? = nil
+        drawingURL: String? = nil,
+        assignees: [String] = []
     ) {
         self.firestoreId = firestoreId
         self.localId = localId
         self.title = title
         self.details = details
         self.drawingURL = drawingURL
+        self.assignees = assignees
     }
 }
 

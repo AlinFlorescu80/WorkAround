@@ -1,5 +1,3 @@
-
-
 import SwiftUI
 import Firebase
 import FirebaseFirestore
@@ -24,7 +22,7 @@ struct InviteUserView: View {
                     TextField("", text: $email)
                         .placeholder(when: email.isEmpty) {
                             Text("Enter email to invite")
-                                .foregroundColor(.secondary) // faded gray
+                                .foregroundColor(.secondary)
                         }
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)

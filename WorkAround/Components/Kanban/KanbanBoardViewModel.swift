@@ -13,6 +13,9 @@ class KanbanBoardViewModel: ObservableObject {
     @Published var columns: [KanbanColumn] = []
     @Published var predictions: [String: String] = [:]   // card-id → importance label
     
+        /// All users who can be assigned to tasks (owner + invited)
+    @Published var invitedUsers: [String] = []
+    
     private let db = Firestore.firestore()
     let boardID: String
     
@@ -28,6 +31,7 @@ class KanbanBoardViewModel: ObservableObject {
         //  MARK: – Lifecycle
     init(boardID: String) {
         self.boardID = boardID
+        fetchInvitedUsers()
         fetchColumns()
     }
     
@@ -125,6 +129,43 @@ class KanbanBoardViewModel: ObservableObject {
                 withAnimation {
                     self.predictions = newPredictions
                 }
+            }
+        }
+    }
+    
+        /// Fetch the list of invited users (including owner) from the board document
+    func fetchInvitedUsers() {
+        db.collection("boards").document(boardID)
+            .addSnapshotListener { snapshot, error in
+                guard let data = snapshot?.data(),
+                      let invited = data["invited"] as? [String] else { return }
+                    // Include the owner’s email
+                let ownerEmail = Auth.auth().currentUser?.email
+                let all = invited + [ownerEmail].compactMap { $0 }
+                DispatchQueue.main.async {
+                    self.invitedUsers = Array(Set(all))
+                }
+            }
+    }
+    
+        /// Add an assignee to a specific card and save the containing column
+    func addAssignee(_ userEmail: String, toCardID cardID: String) {
+        for index in columns.indices {
+            if let cardIndex = columns[index].cards.firstIndex(where: { $0.id == cardID }) {
+                columns[index].cards[cardIndex].assignees.append(userEmail)
+                saveColumn(columns[index])
+                break
+            }
+        }
+    }
+    
+        /// Remove an assignee from a specific card and save the containing column
+    func removeAssignee(_ userEmail: String, fromCardID cardID: String) {
+        for index in columns.indices {
+            if let cardIndex = columns[index].cards.firstIndex(where: { $0.id == cardID }) {
+                columns[index].cards[cardIndex].assignees.removeAll(where: { $0 == userEmail })
+                saveColumn(columns[index])
+                break
             }
         }
     }

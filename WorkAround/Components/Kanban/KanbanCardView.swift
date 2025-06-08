@@ -110,6 +110,19 @@ struct KanbanCardView: View {
                     .frame(maxWidth: .infinity)
                     .foregroundColor(.gray)
             }
+                // Show assigned users
+            if !card.assignees.isEmpty {
+                HStack(spacing: 4) {
+                    ForEach(card.assignees, id: \.self) { assignee in
+                        Text(assignee)
+                            .font(.caption2)
+                            .padding(4)
+                            .background(Color.accentColor.opacity(0.2))
+                            .cornerRadius(4)
+                    }
+                }
+                .padding(.top, 8)
+            }
         }
         .padding()
         .background(pastelBackgroundColor(for: classification))

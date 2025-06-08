@@ -72,12 +72,30 @@ struct KanbanBoardView: View {
                                             return NSItemProvider(item: cardID as NSData?, typeIdentifier: "public.text")
                                         }
                                         .contextMenu {
+                                            Menu("Add assignee") {
+                                                ForEach(viewModel.invitedUsers.filter { !card.assignees.contains($0) }, id: \.self) { user in
+                                                    Button(user) {
+                                                        viewModel.addAssignee(user, toCardID: card.id)
+                                                    }
+                                                }
+                                            }
+                                                // Only show remove menu when there are assignees
+                                            if !card.assignees.isEmpty {
+                                                Menu("Remove assignee") {
+                                                    ForEach(card.assignees, id: \.self) { user in
+                                                        Button(user) {
+                                                            viewModel.removeAssignee(user, fromCardID: card.id)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            Divider()
                                             Button(role: .destructive) {
                                                 if let idx = column.cards.firstIndex(where: { $0.id == card.id }) {
                                                     column.cards.remove(at: idx)
                                                 }
                                             } label: {
-                                                Label("Delete", systemImage: "trash")
+                                                Label("Delete Card", systemImage: "trash")
                                             }
                                         }
                                     }
