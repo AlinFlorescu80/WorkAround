@@ -10,6 +10,7 @@ struct KanbanCardView: View {
     @State private var canvas = PKCanvasView()
     
     private let db = Firestore.firestore()
+    private let assigneeColumns = [GridItem(.adaptive(minimum: 80), spacing: 4)]
     
         /// Loads an existing drawing from disk into the canvas when editing.
     private func loadDrawing() {
@@ -43,13 +44,15 @@ struct KanbanCardView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Title", text: $card.title)
+            TextField("Title", text: $card.title, axis: .vertical)
+                .lineLimit(3)
                 .font(.headline)
-                .textFieldStyle(PlainTextFieldStyle())
+                .background(pastelBackgroundColor(for: classification))
             
-            TextField("Details", text: $card.details)
+            TextField("Details", text: $card.details, axis: .vertical)
+                .lineLimit(3)
                 .font(.subheadline)
-                .textFieldStyle(PlainTextFieldStyle())
+                .background(pastelBackgroundColor(for: classification))
             
             Button("Draw") {
                 showingDrawing = true
@@ -112,7 +115,7 @@ struct KanbanCardView: View {
             }
                 // Show assigned users
             if !card.assignees.isEmpty {
-                HStack(spacing: 4) {
+                LazyVGrid(columns: assigneeColumns, alignment: .leading, spacing: 4) {
                     ForEach(card.assignees, id: \.self) { assignee in
                         Text(assignee)
                             .font(.caption2)

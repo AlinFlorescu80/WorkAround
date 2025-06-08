@@ -10,6 +10,7 @@ import GoogleSignInSwift
 struct AuthenticateView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     @State private var showInitialView: Bool = true
     @State private var email: String = ""
@@ -21,6 +22,7 @@ struct AuthenticateView: View {
     @State private var isPasswordEmpty: Bool = false
     @State private var isEmailInvalid: Bool = false
     @State private var isSigningUp: Bool = false
+    @Namespace private var logoNamespace
     
     var body: some View {
         
@@ -32,21 +34,32 @@ struct AuthenticateView: View {
                     
                     Image("WorkAroundIcon")
                         .resizable()
-                        .frame(width: 250, height: 250)
+                        .matchedGeometryEffect(id: "logo", in: logoNamespace)
+                        .frame(
+                            width: horizontalSizeClass == .regular ? 400 : 250,
+                            height: horizontalSizeClass == .regular ? 400 : 250
+                        )
                     
-                    Spacer()
+                    
                     
                     if showInitialView
                     {
+                        Spacer()
+                        Text("Welcome to WorkAround!")
+                            .font(.system(size: 40, weight: .heavy, design: .rounded))
+                        Spacer()
                         
                         Button {
-                            withAnimation(.bouncy) {
+                            withAnimation(.default) {
                                 isSigningUp = false
                                 showInitialView.toggle()
                             }
                         } label: {
                             Text("Sign in")
-                                .frame(width: 250, height: 50)
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .background(Color.blue)
                                 .foregroundColor(.white)
@@ -62,7 +75,10 @@ struct AuthenticateView: View {
                             }
                         } label: {
                             Text("Sign Up")
-                                .frame(width: 250, height: 50)
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .foregroundColor(.blue)
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
@@ -77,7 +93,7 @@ struct AuthenticateView: View {
                     
                     else {
                         TextField("Mail", text: $email)
-                            .frame(width: 250)
+                            .frame(maxWidth: horizontalSizeClass == .regular ? 400 : 250)
                             .keyboardType(.emailAddress)
                             .textFieldStyle(.roundedBorder)
                             .autocapitalization(.none)
@@ -85,14 +101,17 @@ struct AuthenticateView: View {
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke((isEmailEmpty || isEmailInvalid) ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
                             )
+                            .padding(.top)
+                        
                         
                         SecureField("Password", text: $password)
-                            .frame(width: 250)
+                            .frame(maxWidth: horizontalSizeClass == .regular ? 400 : 250)
                             .textFieldStyle(.roundedBorder)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
                                     .stroke(isPasswordEmpty ? Color.red : Color.gray.opacity(0.5), lineWidth: 1)
                             )
+                        
                         
                         Button {
                                 // Validate fields
@@ -137,7 +156,10 @@ struct AuthenticateView: View {
                             }
                         } label: {
                             Text(isSigningUp ? "Sign up with Email" : "Sign in with Email")
-                                .frame(width: 250, height: 50)
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .background(Color.blue)
                                 .foregroundColor(.white)
@@ -159,7 +181,10 @@ struct AuthenticateView: View {
                         } label: {
                             Text("Sign in with Google")
                                 .foregroundColor(colorScheme == .dark ? .white : .black)
-                                .frame(width: 250, height: 50)
+                                .frame(
+                                    maxWidth: horizontalSizeClass == .regular ? 400 : 250,
+                                    minHeight: 50
+                                )
                                 .contentShape(Rectangle())
                                 .cornerRadius(8)
                                 .background(alignment: .leading) {
@@ -202,8 +227,12 @@ struct AuthenticateView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
-            .overlay(
-                Group {
+            .navigationDestination(isPresented: $navigateToHome)
+            {
+                HomeView(logoNamespace: logoNamespace, showLoadingView: false)
+            }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
                     if !showInitialView {
                         Button(action: {
                             withAnimation(.bouncy) {
@@ -215,19 +244,9 @@ struct AuthenticateView: View {
                                 Image(systemName: "arrow.left")
                                 Text("Back")
                             }
-                            .padding(8)
-                            .background(Color.white.opacity(0.8))
-                            .cornerRadius(8)
                         }
-                        .padding(.top, 10)
-                        .padding(.leading, 10)
                     }
-                },
-                alignment: .topLeading
-            )
-            .navigationDestination(isPresented: $navigateToHome)
-            {
-                HomeView(showLoadingView: false)
+                }
             }
         }
         

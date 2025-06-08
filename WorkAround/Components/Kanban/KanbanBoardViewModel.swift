@@ -15,6 +15,7 @@ class KanbanBoardViewModel: ObservableObject {
     
         /// All users who can be assigned to tasks (owner + invited)
     @Published var invitedUsers: [String] = []
+    @Published var boardTitle: String = ""
     
     private let db = Firestore.firestore()
     let boardID: String
@@ -33,6 +34,20 @@ class KanbanBoardViewModel: ObservableObject {
         self.boardID = boardID
         fetchInvitedUsers()
         fetchColumns()
+        fetchBoardTitle()
+    }
+        /// Fetches the board title from Firestore and stores it in `boardTitle`
+    private func fetchBoardTitle() {
+        db.collection("boards").document(boardID).getDocument { snapshot, error in
+            if let data = snapshot?.data(),
+               let title = data["title"] as? String {
+                DispatchQueue.main.async {
+                    self.boardTitle = title
+                }
+            } else if let error = error {
+                print("Error fetching board title: \(error.localizedDescription)")
+            }
+        }
     }
     
         //  MARK: – Networking / data

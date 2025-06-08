@@ -47,6 +47,7 @@ struct KanbanBoardView: View {
                         .background(Color.accentColor.opacity(0.1))
                         .foregroundColor(Color.accentColor)
                         .cornerRadius(8)
+                        .lineLimit(1)
                 }
                 .padding(.trailing, 12)
                 .accessibilityLabel("Run AI task classifier")
@@ -175,5 +176,7 @@ struct KanbanBoardView: View {
                 viewModel.saveColumn(col)
             }
         }
+        .navigationTitle(viewModel.boardTitle)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

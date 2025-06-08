@@ -16,22 +16,24 @@ import UIKit
 
     // SplashView with pulsing and expand/fade animation for WorkAroundIcon
 struct SplashView: View {
+    var namespace: Namespace.ID
     @State private var scale: CGFloat = 1.0
     @State private var opacity: Double = 1.0
     var body: some View {
         Image("WorkAroundIcon")
             .resizable()
+            .matchedGeometryEffect(id: "logo", in: namespace)
             .scaledToFit()
             .frame(width: 120, height: 120)
             .scaleEffect(scale)
             .opacity(opacity)
             .onAppear {
-                    // Pulse twice
-                withAnimation(Animation.easeInOut(duration: 0.6).repeatCount(2, autoreverses: true)) {
+                    // Pulse four times
+                withAnimation(Animation.easeInOut(duration: 0.6).repeatCount(4, autoreverses: true)) {
                     scale = 1.2
                 }
                     // After pulses, expand and fade away
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
                     withAnimation(.easeInOut(duration: 0.5)) {
                         scale = 25.0
                         opacity = 0.0
@@ -50,6 +52,7 @@ private struct BoardInfo: Identifiable {
 }
 
 struct HomeView: View {
+    let logoNamespace: Namespace.ID
         // MARK: – Environment
     @EnvironmentObject var authManager: AuthManager
     
@@ -57,7 +60,7 @@ struct HomeView: View {
     @State private var searchText           = ""
     @State private var isLoading            = true
     @State private var showProfileSheet     = false
-//    @State private var navigateToAuth       = false
+        //    @State private var navigateToAuth       = false
     @State var showLoadingView: Bool
     @State private var showingNewBoardSheet = false
     @State private var editingBoard: BoardInfo?
@@ -79,14 +82,14 @@ struct HomeView: View {
             
                 // Splash animation overlay
             if showSplash {
-                SplashView()
+                SplashView(namespace: logoNamespace)
                     .transition(.opacity)
                     .zIndex(1)
             }
         }
         .onAppear {
                 // Always play splash on launch
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.9) {
                 withAnimation(.easeInOut) {
                     showSplash = false
                 }
@@ -96,26 +99,26 @@ struct HomeView: View {
         .task { await loadBoards() }      // fetch board list on appear
         .onAppear {
                 // Redirect to sign‑in if not authenticated
-//            if !authManager.isSignedIn {
-//                navigateToAuth = true
-//                return
-//            }
+                //            if !authManager.isSignedIn {
+                //                navigateToAuth = true
+                //                return
+                //            }
                 // Fake splash‑screen delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 withAnimation { isLoading = false }
             }
         }
-//        .onChange(of: authManager.isSignedIn) { signedIn in
-//                // Navigate back to sign‑in screen when signing out
-//            if !signedIn {
-//                navigateToAuth = true
-//            }
-//        }
+            //        .onChange(of: authManager.isSignedIn) { signedIn in
+            //                // Navigate back to sign‑in screen when signing out
+            //            if !signedIn {
+            //                navigateToAuth = true
+            //            }
+            //        }
             // Present authentication modally if not signed in
-//        .fullScreenCover(isPresented: $navigateToAuth) {
-//            AuthenticateView()
-//                .environmentObject(authManager)
-//        }
+            //        .fullScreenCover(isPresented: $navigateToAuth) {
+            //            AuthenticateView()
+            //                .environmentObject(authManager)
+            //        }
     }
     
         // MARK: – Dashboard (boards)
