@@ -5,6 +5,7 @@
     //  Created by Alin Florescu on 18.02.2025.
     //
 
+
 import SwiftUI
 import Firebase
 import FirebaseAuth
@@ -12,6 +13,33 @@ import FirebaseFirestore
 import PhotosUI
 import FirebaseStorage
 import UIKit
+
+    // SplashView with pulsing and expand/fade animation for WorkAroundIcon
+struct SplashView: View {
+    @State private var scale: CGFloat = 1.0
+    @State private var opacity: Double = 1.0
+    var body: some View {
+        Image("WorkAroundIcon")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 120, height: 120)
+            .scaleEffect(scale)
+            .opacity(opacity)
+            .onAppear {
+                    // Pulse twice
+                withAnimation(Animation.easeInOut(duration: 0.6).repeatCount(2, autoreverses: true)) {
+                    scale = 1.2
+                }
+                    // After pulses, expand and fade away
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    withAnimation(.easeInOut(duration: 0.5)) {
+                        scale = 25.0
+                        opacity = 0.0
+                    }
+                }
+            }
+    }
+}
 
     /// Simple model for listing boards with title, optional description, and optional photo.
 private struct BoardInfo: Identifiable {
@@ -34,6 +62,9 @@ struct HomeView: View {
     @State private var showingNewBoardSheet = false
     @State private var editingBoard: BoardInfo?
     
+        /// Controls whether the splash is visible
+    @State private var showSplash: Bool = true
+    
         // MARK: – Board Data
     @State private var boards: [BoardInfo] = []      // user’s boards with metadata
     private let db = Firestore.firestore()
@@ -41,16 +72,27 @@ struct HomeView: View {
         // MARK: – Body
     var body: some View {
         ZStack {
+                // Main dashboard, hidden until splash finishes
             dashboard
-                .opacity(showLoadingView ? 0 : 1)
-                .animation(.easeIn(duration: 0.5), value: showLoadingView)
+                .opacity(showSplash ? 0 : 1)
+                .animation(.easeInOut, value: showSplash)
             
-            if showLoadingView {
-                NaturalLoadingView(isLoading: $isLoading) {
-                    showLoadingView = false
+                // Splash animation overlay
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .onAppear {
+                // Always play splash on launch
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) {
+                withAnimation(.easeInOut) {
+                    showSplash = false
                 }
             }
         }
+            // Existing lifecycle modifiers unchanged
         .task { await loadBoards() }      // fetch board list on appear
         .onAppear {
                 // Redirect to sign‑in if not authenticated
@@ -381,31 +423,31 @@ private struct NewBoardSheet: View {
                 Section("Description") {
                     TextField("Enter description (optional)", text: $description)
                 }
-//                Section("Photo") {
-//                    PhotosPicker(selection: $photoItem,
-//                                 matching: .images,
-//                                 photoLibrary: .shared()) {
-//                        HStack {
-//                            Label("Choose Photo", systemImage: "photo")
-//                            Spacer()
-//                            if let data = imageData,
-//                               let uiImage = UIImage(data: data) {
-//                                Image(uiImage: uiImage)
-//                                    .resizable()
-//                                    .scaledToFit()
-//                                    .frame(width: 60, height: 60)
-//                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-//                            }
-//                        }
-//                    }
-//                                 .onChange(of: photoItem) { item in
-//                                     Task {
-//                                         if let data = try? await item?.loadTransferable(type: Data.self) {
-//                                             imageData = data
-//                                         }
-//                                     }
-//                                 }
-//                }
+                    //                Section("Photo") {
+                    //                    PhotosPicker(selection: $photoItem,
+                    //                                 matching: .images,
+                    //                                 photoLibrary: .shared()) {
+                    //                        HStack {
+                    //                            Label("Choose Photo", systemImage: "photo")
+                    //                            Spacer()
+                    //                            if let data = imageData,
+                    //                               let uiImage = UIImage(data: data) {
+                    //                                Image(uiImage: uiImage)
+                    //                                    .resizable()
+                    //                                    .scaledToFit()
+                    //                                    .frame(width: 60, height: 60)
+                    //                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    //                            }
+                    //                        }
+                    //                    }
+                    //                                 .onChange(of: photoItem) { item in
+                    //                                     Task {
+                    //                                         if let data = try? await item?.loadTransferable(type: Data.self) {
+                    //                                             imageData = data
+                    //                                         }
+                    //                                     }
+                    //                                 }
+                    //                }
             }
             .navigationTitle("New Board")
             .toolbar {

@@ -47,9 +47,14 @@ struct ChatView: View {
                                 }
                             }
                             .id(msg.id)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            ))
                         }
                     }
                     .padding(.horizontal, 10)
+                    .animation(.easeInOut, value: viewModel.messages.count)
                 }
                 .onChange(of: viewModel.messages.count) { _ in
                         // auto‑scroll to the latest message
