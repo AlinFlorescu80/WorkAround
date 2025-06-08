@@ -286,7 +286,6 @@ extension AuthenticateView {
             return false
         }
         
-        return false
         
         
     }

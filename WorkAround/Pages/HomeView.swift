@@ -57,7 +57,7 @@ struct HomeView: View {
     @State private var searchText           = ""
     @State private var isLoading            = true
     @State private var showProfileSheet     = false
-    @State private var navigateToAuth       = false
+//    @State private var navigateToAuth       = false
     @State var showLoadingView: Bool
     @State private var showingNewBoardSheet = false
     @State private var editingBoard: BoardInfo?
@@ -96,26 +96,26 @@ struct HomeView: View {
         .task { await loadBoards() }      // fetch board list on appear
         .onAppear {
                 // Redirect to sign‑in if not authenticated
-            if !authManager.isSignedIn {
-                navigateToAuth = true
-                return
-            }
+//            if !authManager.isSignedIn {
+//                navigateToAuth = true
+//                return
+//            }
                 // Fake splash‑screen delay
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 withAnimation { isLoading = false }
             }
         }
-        .onChange(of: authManager.isSignedIn) { signedIn in
-                // Navigate back to sign‑in screen when signing out
-            if !signedIn {
-                navigateToAuth = true
-            }
-        }
+//        .onChange(of: authManager.isSignedIn) { signedIn in
+//                // Navigate back to sign‑in screen when signing out
+//            if !signedIn {
+//                navigateToAuth = true
+//            }
+//        }
             // Present authentication modally if not signed in
-        .fullScreenCover(isPresented: $navigateToAuth) {
-            AuthenticateView()
-                .environmentObject(authManager)
-        }
+//        .fullScreenCover(isPresented: $navigateToAuth) {
+//            AuthenticateView()
+//                .environmentObject(authManager)
+//        }
     }
     
         // MARK: – Dashboard (boards)
