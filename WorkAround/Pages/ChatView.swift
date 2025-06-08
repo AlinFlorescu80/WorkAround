@@ -20,13 +20,30 @@ struct ChatView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(viewModel.messages) { msg in
-                            HStack {
-                                if msg.sender == senderEmail {
-                                    Spacer()
-                                    bubble(msg.text, color: .blue.opacity(0.2))
-                                } else {
-                                    bubble(msg.text, color: .gray.opacity(0.2))
-                                    Spacer()
+                            VStack(spacing: 4) {
+                                    // Sender’s email aligned with the bubble
+                                HStack {
+                                    if msg.sender == senderEmail {
+                                        Spacer()
+                                        Text(msg.sender)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    } else {
+                                        Text(msg.sender)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                        Spacer()
+                                    }
+                                }
+                                    // Message bubble aligned the same way
+                                HStack {
+                                    if msg.sender == senderEmail {
+                                        Spacer()
+                                        bubble(msg.text, color: .blue.opacity(0.2))
+                                    } else {
+                                        bubble(msg.text, color: .gray.opacity(0.2))
+                                        Spacer()
+                                    }
                                 }
                             }
                             .id(msg.id)
