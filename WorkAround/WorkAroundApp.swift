@@ -65,10 +65,8 @@ final class ChatNotificationService {
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-            // Allow banners & sounds while app is in the foreground
         UNUserNotificationCenter.current().delegate = self
         FirebaseApp.configure()
-            // TODO: replace "sharedBoardID" with your real board identifier
         ChatNotificationService.shared.startListening(for: "sharedBoardID")
         
         return true

@@ -47,6 +47,8 @@ struct AuthenticateView: View {
                         Spacer()
                         Text("Welcome to WorkAround!")
                             .font(.system(size: 40, weight: .heavy, design: .rounded))
+                            .multilineTextAlignment(.center) // optional, for clarity
+                            .frame(maxWidth: .infinity, alignment: .center)
                         Spacer()
                         
                         Button {
@@ -114,11 +116,11 @@ struct AuthenticateView: View {
                         
                         
                         Button {
-                                // Validate fields
+                                // Validare fields
                             isEmailEmpty = email.isEmpty
                             isPasswordEmpty = password.isEmpty
                             guard !isEmailEmpty && !isPasswordEmpty else { return }
-                                // Validate email format
+                                // Validare email
                             let emailPattern = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
                             let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailPattern)
                             isEmailInvalid = !emailPredicate.evaluate(with: email)
