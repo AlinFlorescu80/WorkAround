@@ -27,7 +27,8 @@ struct NaturalLoadingView: View {
                 .saturation(zoomIn ? 0 : 1)
                 .scaleEffect(zoomIn ? 100 : (pulse ? 1.15 : 1.05))
                 .opacity(zoomIn ? 0 : 1)
-                .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: pulse)
+                .animation(.easeInOut(duration: 1.2)
+                    .repeatForever(autoreverses: true), value: pulse)
         }
         .onAppear {
             pulse.toggle()

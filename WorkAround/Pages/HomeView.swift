@@ -128,9 +128,7 @@ struct HomeView: View {
                 Section("My Boards") {
                     ForEach(filteredBoards) { board in
                         ZStack {
-                                // Visible row content
                             HStack(alignment: .center) {
-                                    // Title + optional description on the left
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(board.title)
                                         .font(.headline)

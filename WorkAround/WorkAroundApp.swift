@@ -5,7 +5,6 @@ import FirebaseAuth
 import UserNotifications
 import FirebaseFirestore
 
-    /// Keeps Firestore listeners alive so local notifications fire even when UI is closed.
 final class ChatNotificationService {
     static let shared = ChatNotificationService()
     private init() {}
@@ -13,9 +12,8 @@ final class ChatNotificationService {
     private let db = Firestore.firestore()
     private var listeners: [String: ListenerRegistration] = [:]
     
-        /// Start listening for new messages on a board. Calling twice with the same ID does nothing.
     func startListening(for boardID: String) {
-        var isInitialSnapshot = true  // ignore the first batch of existing messages
+        var isInitialSnapshot = true
         guard listeners[boardID] == nil else { return }
         
         let handle = db.collection("boards")
@@ -35,10 +33,9 @@ final class ChatNotificationService {
                 snapshot?.documentChanges.forEach { change in
                     if change.type == .added,
                        let msg = try? change.document.data(as: ChatMessage.self) {
-                            // Skip notifications for messages authored by the current user
                         if let myEmail = Auth.auth().currentUser?.email?.lowercased(),
                            msg.sender.lowercased() == myEmail {
-                            return           // ignore own message
+                            return
                         }
                         Self.fireLocalNotification(for: msg)
                     }
@@ -67,7 +64,17 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
         FirebaseApp.configure()
-        ChatNotificationService.shared.startListening(for: "sharedBoardID")
+        if let email = Auth.auth().currentUser?.email?.lowercased() {
+            Firestore.firestore().collection("boards").whereField("members", arrayContains: email).getDocuments { snapshot, error in
+                guard let docs = snapshot?.documents, error == nil else {
+                    print("Error fetching boards for notifications: \(error?.localizedDescription ?? "unknown error")")
+                    return
+                }
+                for doc in docs {
+                    ChatNotificationService.shared.startListening(for: doc.documentID)
+                }
+            }
+        }
         
         return true
     }
@@ -84,7 +91,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 struct WorkAroundApp: App {
     @StateObject var authManager = AuthManager()
     @Namespace private var logoNamespace
-
+    
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([ Item.self ])

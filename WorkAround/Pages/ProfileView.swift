@@ -110,7 +110,7 @@ struct ProfileView: View {
         switch appearanceOption {
             case 0: style = .light
             case 1: style = .dark
-            default: style = .unspecified   // system / follow device
+            default: style = .unspecified   // system
         }
         for scene in UIApplication.shared.connectedScenes {
             guard let windowScene = scene as? UIWindowScene else { continue }

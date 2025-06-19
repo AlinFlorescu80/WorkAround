@@ -260,9 +260,9 @@ struct AuthenticateView: View {
 }
 
 
-    //#Preview {
-    //    AuthenticateView()
-    //}
+    #Preview {
+        AuthenticateView()
+    }
 
 
     //MARK: Google Sign-In
