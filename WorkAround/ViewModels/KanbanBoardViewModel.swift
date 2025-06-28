@@ -6,21 +6,22 @@ import Foundation
 import Firebase
 import FirebaseAuth
 import FirebaseFirestore
-import CoreML // ← new
+import CoreML   // ← new
 import SwiftUI
 
 class KanbanBoardViewModel: ObservableObject {
-    @Published var columns: [KanbanColumn] = []
-    @Published var predictions: [String: String] = [:]   // card-id → importance label
     
-        /// All users who can be assigned to tasks (owner + invited)
-    @Published var invitedUsers: [String] = []
+        // MARK: – Published state
+    @Published var columns: [KanbanColumn] = []
+    @Published var predictions: [String: String] = [:]      // card-id → importance label
+    @Published var invitedUsers: [String] = []              // owner + invited
     @Published var boardTitle: String = ""
     
+        // MARK: – Private members
     private let db = Firestore.firestore()
     let boardID: String
     
-        //  MARK: – Core ML model
+        // MARK: – Core ML model
     private let classifier: TaskImportanceClassifier = {
         do {
             return try TaskImportanceClassifier(configuration: MLModelConfiguration())
@@ -29,35 +30,34 @@ class KanbanBoardViewModel: ObservableObject {
         }
     }()
     
-        //  MARK: – Lifecycle
+        // MARK: – Lifecycle
     init(boardID: String) {
         self.boardID = boardID
         fetchInvitedUsers()
         fetchColumns()
         fetchBoardTitle()
     }
-        /// Fetches the board title from Firestore and stores it in `boardTitle`
+    
+        // MARK: – Board metadata
     private func fetchBoardTitle() {
         db.collection("boards").document(boardID).getDocument { snapshot, error in
             if let data = snapshot?.data(),
                let title = data["title"] as? String {
-                DispatchQueue.main.async {
-                    self.boardTitle = title
-                }
+                DispatchQueue.main.async { self.boardTitle = title }
             } else if let error = error {
                 print("Error fetching board title: \(error.localizedDescription)")
             }
         }
     }
     
-        //  MARK: – Networking / data
+        // MARK: – Column CRUD
     func fetchColumns() {
         db.collection("boards")
             .document(boardID)
             .collection("columns")
             .addSnapshotListener { snapshot, error in
                 guard let documents = snapshot?.documents else {
-                    print("Error fetching columns: \(error?.localizedDescription ?? "alt fel de eroare la fetch")")
+                    print("Error fetching columns: \(error?.localizedDescription ?? "unknown error")")
                     return
                 }
                 self.columns = documents
@@ -68,6 +68,7 @@ class KanbanBoardViewModel: ObservableObject {
     
     func saveColumn(_ column: KanbanColumn) {
         var columnToSave = column
+            // Assign a Firestore ID if it doesn’t have one yet
         if columnToSave.firestoreId == nil {
             let newDocRef = db.collection("boards")
                 .document(boardID)
@@ -76,6 +77,7 @@ class KanbanBoardViewModel: ObservableObject {
             columnToSave.firestoreId = newDocRef.documentID
         }
         guard let columnID = columnToSave.firestoreId else { return }
+        
         do {
             try db.collection("boards")
                 .document(boardID)
@@ -90,11 +92,9 @@ class KanbanBoardViewModel: ObservableObject {
         }
     }
     
-        /// Deletes a column document from Firestore
     func deleteColumn(_ column: KanbanColumn) {
         guard let columnID = column.firestoreId else { return }
-        db
-            .collection("boards")
+        db.collection("boards")
             .document(boardID)
             .collection("columns")
             .document(columnID)
@@ -105,27 +105,7 @@ class KanbanBoardViewModel: ObservableObject {
             }
     }
     
-    func descriptiveText(for label: String) -> String {
-        switch label {
-            case "DataValue(6)":
-                return "High Importance"
-            case "DataValue(5)":
-                return "Medium Importance"
-            case "DataValue(4)":
-                return "Moderate Importance"
-            case "DataValue(3)":
-                return "Low Importance"
-            case "DataValue(2)":
-                return "Very Low Importance"
-            case "DataValue(1)":
-                return "Negligible Importance"
-            default:
-                return "Unknown Importance"
-        }
-    }
-    
-        //  MARK: – AI helpers
-        /// Classifies every card’s `title` using the Core ML model and stores the prediction in `predictions`.
+        // MARK: – Core ML helpers
     func classifyAllTasks() {
         DispatchQueue.global(qos: .userInitiated).async {
             var newPredictions: [String: String] = [:]
@@ -134,27 +114,36 @@ class KanbanBoardViewModel: ObservableObject {
                     do {
                         let result = try self.classifier.prediction(text: card.title)
                         newPredictions[card.id] = result.label
-                        print("S-a clasificat cu AI \(result.label)")  // pentru testing
+                        print("Classified “\(card.title)” → \(result.label)")
                     } catch {
                         print("Prediction failed for \(card.title): \(error)")
                     }
                 }
             }
             DispatchQueue.main.async {
-                withAnimation {
-                    self.predictions = newPredictions
-                }
+                withAnimation { self.predictions = newPredictions }
             }
         }
     }
     
-        /// Fetch the list of invited users (including owner) from the board document
-    func fetchInvitedUsers() {
+    func descriptiveText(for label: String) -> String {
+        switch label {
+            case "DataValue(6)": return "High Importance"
+            case "DataValue(5)": return "Medium Importance"
+            case "DataValue(4)": return "Moderate Importance"
+            case "DataValue(3)": return "Low Importance"
+            case "DataValue(2)": return "Very Low Importance"
+            case "DataValue(1)": return "Negligible Importance"
+            default:             return "Unknown Importance"
+        }
+    }
+    
+        // MARK: – Invited users
+    private func fetchInvitedUsers() {
         db.collection("boards").document(boardID)
-            .addSnapshotListener { snapshot, error in
+            .addSnapshotListener { snapshot, _ in
                 guard let data = snapshot?.data(),
                       let invited = data["invited"] as? [String] else { return }
-                    // Include the owner’s email
                 let ownerEmail = Auth.auth().currentUser?.email
                 let all = invited + [ownerEmail].compactMap { $0 }
                 DispatchQueue.main.async {
@@ -163,23 +152,20 @@ class KanbanBoardViewModel: ObservableObject {
             }
     }
     
-        /// Add an assignee to a specific card and save the containing column
+        // MARK: – Assignee helpers
     func addAssignee(_ userEmail: String, toCardID cardID: String) {
         for index in columns.indices {
             if let cardIndex = columns[index].cards.firstIndex(where: { $0.id == cardID }) {
                 columns[index].cards[cardIndex].assignees.append(userEmail)
-                saveColumn(columns[index])
                 break
             }
         }
     }
     
-        /// Remove an assignee from a specific card and save the containing column
     func removeAssignee(_ userEmail: String, fromCardID cardID: String) {
         for index in columns.indices {
             if let cardIndex = columns[index].cards.firstIndex(where: { $0.id == cardID }) {
-                columns[index].cards[cardIndex].assignees.removeAll(where: { $0 == userEmail })
-                saveColumn(columns[index])
+                columns[index].cards[cardIndex].assignees.removeAll { $0 == userEmail }
                 break
             }
         }

@@ -108,12 +108,14 @@ struct KanbanBoardView: View {
                             .cornerRadius(8)
                             .onDrop(of: [.text], delegate: ColumnDropDelegate(targetColumn: $column, allColumns: $viewModel.columns))
                             
-                            Button(action: {
+                            Button(action:
+                                    {
                                 let newCard = KanbanCard(title: "New Task", details: "Task details")
                                 withAnimation {
                                     column.cards.append(newCard)
                                 }
-                            }) {
+                            }
+                            ) {
                                 HStack {
                                     Image(systemName: "plus.circle")
                                     Text("Add Card")
@@ -139,13 +141,15 @@ struct KanbanBoardView: View {
                         }
                     }
                         //  Add‑column button
-                    Button(action: {
+                    Button(action:
+                            {
                         let nextOrder = (viewModel.columns.map(\.order).max() ?? -1) + 1
                         let newColumn = KanbanColumn(title: "New Column", cards: [], order: nextOrder)
                         withAnimation {
                             viewModel.columns.append(newColumn)
                         }
-                    }) {
+                    }
+                    ) {
                         VStack {
                             Image(systemName: "plus.circle.fill")
                                 .resizable()
