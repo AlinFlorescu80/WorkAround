@@ -40,12 +40,12 @@ class ChatViewModel: ObservableObject {
     
     func sendMessage(sender: String) {
         let message = ChatMessage(sender: sender, text: newMessage, timestamp: Date())
+        newMessage = ""
         do {
             _ = try db.collection("boards")
                 .document(boardID)
                 .collection("messages")
                 .addDocument(from: message)
-            newMessage = ""
         } catch {
             print("Error sending message: \(error)")
         }
