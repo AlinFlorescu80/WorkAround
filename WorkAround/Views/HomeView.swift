@@ -14,7 +14,6 @@ import PhotosUI
 import FirebaseStorage
 import UIKit
 
-    // SplashView with pulsing and expand/fade animation for WorkAroundIcon
 struct SplashView: View {
     var namespace: Namespace.ID
     @State private var scale: CGFloat = 1.0
@@ -28,11 +27,9 @@ struct SplashView: View {
             .scaleEffect(scale)
             .opacity(opacity)
             .onAppear {
-                    // Pulse four times
                 withAnimation(Animation.easeInOut(duration: 0.6).repeatCount(4, autoreverses: true)) {
                     scale = 1.2
                 }
-                    // After pulses, expand and fade away
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
                     withAnimation(.easeInOut(duration: 0.5)) {
                         scale = 25.0
@@ -43,7 +40,6 @@ struct SplashView: View {
     }
 }
 
-    /// Simple model for listing boards with title, optional description, and optional photo.
 private struct BoardInfo: Identifiable {
     let id: String
     let title: String
@@ -53,34 +49,26 @@ private struct BoardInfo: Identifiable {
 
 struct HomeView: View {
     let logoNamespace: Namespace.ID
-        // MARK: – Environment
     @EnvironmentObject var authManager: AuthManager
     
-        // MARK: – UI State
     @State private var searchText           = ""
     @State private var isLoading            = true
     @State private var showProfileSheet     = false
-        //    @State private var navigateToAuth       = false
     @State var showLoadingView: Bool
     @State private var showingNewBoardSheet = false
     @State private var editingBoard: BoardInfo?
     
-        /// Controls whether the splash is visible
     @State private var showSplash: Bool = true
     
-        // MARK: – Board Data
-    @State private var boards: [BoardInfo] = []      // user’s boards with metadata
+    @State private var boards: [BoardInfo] = []
     private let db = Firestore.firestore()
     
-        // MARK: – Body
     var body: some View {
         ZStack {
-                // Main dashboard, hidden until splash finishes
             dashboard
                 .opacity(showSplash ? 0 : 1)
                 .animation(.easeInOut, value: showSplash)
             
-                // Splash animation overlay
             if showSplash {
                 SplashView(namespace: logoNamespace)
                     .transition(.opacity)
@@ -88,40 +76,22 @@ struct HomeView: View {
             }
         }
         .onAppear {
-                // Always play splash on launch
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.9) {
                 withAnimation(.easeInOut) {
                     showSplash = false
                 }
             }
         }
-            // Existing lifecycle modifiers unchanged
-        .task { await loadBoards() }      // fetch board list on appear
+        .task { await loadBoards() }
         .onAppear {
-                // Redirect to sign‑in if not authenticated
-                //            if !authManager.isSignedIn {
-                //                navigateToAuth = true
-                //                return
-                //            }
-                // Fake splash‑screen delay
+               
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                 withAnimation { isLoading = false }
             }
         }
-            //        .onChange(of: authManager.isSignedIn) { signedIn in
-            //                // Navigate back to sign‑in screen when signing out
-            //            if !signedIn {
-            //                navigateToAuth = true
-            //            }
-            //        }
-            // Present authentication modally if not signed in
-            //        .fullScreenCover(isPresented: $navigateToAuth) {
-            //            AuthenticateView()
-            //                .environmentObject(authManager)
-            //        }
+            
     }
     
-        // MARK: – Dashboard (boards)
     private var dashboard: some View {
         NavigationStack {
             List {
@@ -143,7 +113,6 @@ struct HomeView: View {
                                 
                                 Spacer(minLength: 12)
                                 
-                                    // Chevron icon on the right
                                 Image(systemName: "chevron.right")
                                     .imageScale(.small)
                                     .font(.subheadline.weight(.semibold))
@@ -156,11 +125,10 @@ struct HomeView: View {
                                     .fill(Color(uiColor: .secondarySystemBackground))
                             )
                             
-                                // Invisible NavigationLink overlay (no chevron)
                             NavigationLink(destination: KanbanBoardView(boardID: board.id)) {
                                 EmptyView()
                             }
-                            .opacity(0)                // hide link label & chevron
+                            .opacity(0)
                         }
                         .contextMenu {
                             Button {
@@ -186,7 +154,6 @@ struct HomeView: View {
             .navigationTitle("Home")
             .navigationBarBackButtonHidden(true)
             .toolbar {
-                    // Leading: create board
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
                         showingNewBoardSheet = true
@@ -194,7 +161,6 @@ struct HomeView: View {
                         Label("New Board", systemImage: "plus")
                     }
                 }
-                    // Trailing: auth/profile
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     Button { showProfileSheet = true } label: {
                         Image(systemName: "person.circle")
@@ -268,15 +234,12 @@ struct HomeView: View {
         }
     }
     
-        // MARK: – Board helpers
-        /// Load board IDs the user owns or is invited to.
     private func loadBoards() async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         guard let userEmail = Auth.auth().currentUser?.email?.lowercased() else { return }
         do {
             var newBoards: [BoardInfo] = []
             
-                // 1. Fetch owned boards (shallow list)
             let ownedSnap = try await db
                 .collection("users")
                 .document(uid)
@@ -293,14 +256,12 @@ struct HomeView: View {
                                            photoURL: photoURL))
             }
             
-                // 2. Fetch invited boards from root collection
             let invitedSnap = try await db
                 .collection("boards")
                 .whereField("invited", arrayContains: userEmail)
                 .getDocuments()
             for doc in invitedSnap.documents {
                 let boardID = doc.documentID
-                    // avoid duplicates if user is also the owner
                 guard !newBoards.contains(where: { $0.id == boardID }) else { continue }
                 let data = doc.data()
                 guard let title = data["title"] as? String else { continue }
@@ -312,21 +273,18 @@ struct HomeView: View {
                                            photoURL: photoURL))
             }
             
-                // Update on main thread
             DispatchQueue.main.async {
                 boards = newBoards
-                registerBoardListeners(newBoards)   // 🔔 start listeners
+                registerBoardListeners(newBoards)
             }
         } catch {
             print("Failed to load boards:", error)
         }
     }
     
-        /// Create a new board doc, set up defaults, and navigate to it.
     private func createBoard(title: String, description: String?, image: UIImage?) async {
         guard let uid = Auth.auth().currentUser?.uid else { return }
         do {
-                // 1️⃣ Create the board document
             let newRef  = db.collection("boards").document()
             let boardID = newRef.documentID
             
@@ -341,7 +299,6 @@ struct HomeView: View {
             }
             try await newRef.setData(data)
             
-                // 2️⃣ Create default columns
             let columnsRef = newRef.collection("columns")
             let defaultCols: [[String: Any]] = [
                 ["localId": UUID().uuidString, "title": "To Do",        "cards": [], "order": 0],
@@ -353,7 +310,6 @@ struct HomeView: View {
                 try await colDoc.setData(colData)
             }
             
-                // 3️⃣ Upload photo if provided
             if let image {
                 let storageRef = Storage.storage().reference()
                     .child("boards/\(boardID)/photo.jpg")
@@ -364,7 +320,6 @@ struct HomeView: View {
                 }
             }
             
-                // 4️⃣ Reference under the user
             var userBoardData: [String: Any] = [
                 "created": FieldValue.serverTimestamp(),
                 "title": title
@@ -379,7 +334,6 @@ struct HomeView: View {
                 .document(boardID)
                 .setData(userBoardData)
             
-                // 5️⃣ Update local list and navigate
             boards.append(BoardInfo(id: boardID,
                                     title: title,
                                     description: description,
@@ -388,13 +342,11 @@ struct HomeView: View {
                                               title: title,
                                               description: description,
                                               photoURL: nil)])
-                // Immediate navigation is handled by the direct NavigationLink
         } catch {
             print("Failed to create board:", error)
         }
     }
     
-        /// Start background chat listeners for every board in `infos`.
     private func registerBoardListeners(_ infos: [BoardInfo]) {
         infos.forEach { ChatNotificationService.shared.startListening(for: $0.id) }
     }
@@ -424,31 +376,7 @@ private struct NewBoardSheet: View {
                 Section("Description") {
                     TextField("Enter description (optional)", text: $description)
                 }
-                    //                Section("Photo") {
-                    //                    PhotosPicker(selection: $photoItem,
-                    //                                 matching: .images,
-                    //                                 photoLibrary: .shared()) {
-                    //                        HStack {
-                    //                            Label("Choose Photo", systemImage: "photo")
-                    //                            Spacer()
-                    //                            if let data = imageData,
-                    //                               let uiImage = UIImage(data: data) {
-                    //                                Image(uiImage: uiImage)
-                    //                                    .resizable()
-                    //                                    .scaledToFit()
-                    //                                    .frame(width: 60, height: 60)
-                    //                                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    //                            }
-                    //                        }
-                    //                    }
-                    //                                 .onChange(of: photoItem) { item in
-                    //                                     Task {
-                    //                                         if let data = try? await item?.loadTransferable(type: Data.self) {
-                    //                                             imageData = data
-                    //                                         }
-                    //                                     }
-                    //                                 }
-                    //                }
+                  
             }
             .navigationTitle("New Board")
             .toolbar {
@@ -476,7 +404,6 @@ private struct NewBoardSheet: View {
     //        HomeView(showLoadingView: true)
     //            .environmentObject(AuthManager())
     //    }
-    // REMINDER: AM SI ANIMATIE CA LA TWITTER AICI!!!!
 
 private struct EditBoardSheet: View {
     @Environment(\.dismiss) var dismiss

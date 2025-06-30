@@ -4,7 +4,7 @@ import FirebaseFirestore
 
 struct InviteUserView: View {
     @Environment(\.dismiss) private var dismiss
-    let boardID: String                 // passed in from KanbanBoardView
+    let boardID: String
     
     @State private var email = ""
     @State private var status: String?
@@ -12,7 +12,6 @@ struct InviteUserView: View {
     @State private var invitedUsers: [String] = []
     
     private var isEmailValid: Bool {
-            // quick & simple check
         email.contains("@") && email.contains(".")
     }
     
@@ -99,7 +98,6 @@ struct InviteUserView: View {
             }
     }
     
-        /// Fetches the list of invited users from Firestore
     private func fetchInvitedUsers() {
         let db = Firestore.firestore()
         db.collection("boards").document(boardID)

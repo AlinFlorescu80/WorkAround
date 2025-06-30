@@ -1,15 +1,13 @@
 import Foundation
 import FirebaseFirestore
 
-    /// Model representing a single Kanban card
 struct KanbanCard: Identifiable, Codable {
     
-        /// Stable identifier saved to Firestore and used by SwiftUI diffing
     var id: String = UUID().uuidString
     
     var title: String
     var details: String
-    var drawingURL: String?        // optional PencilKit drawing
+    var drawingURL: String?
     var assignees: [String] = []
     
     init(
@@ -27,7 +25,6 @@ struct KanbanCard: Identifiable, Codable {
     }
 }
 
-    /// Represents a column in the Kanban board
 struct KanbanColumn: Identifiable, Codable {
     @DocumentID var firestoreId: String? = nil
     var localId: String = UUID().uuidString

@@ -2,7 +2,6 @@ import Foundation
 import SwiftUI
 import FirebaseFirestore
 
-    /// View‑model that handles chat logic *and* local notification scheduling.
 class ChatViewModel: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var newMessage: String = ""
@@ -15,11 +14,6 @@ class ChatViewModel: ObservableObject {
         self.boardID = boardID
         listenForMessages()
     }
-    
-        // Notification logic removed; now handled by ChatNotificationService.
-    
-        // MARK: ‑ Firestore
-    
     private func listenForMessages() {
         listener = db.collection("boards")
             .document(boardID)

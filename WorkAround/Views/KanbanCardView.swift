@@ -12,7 +12,6 @@ struct KanbanCardView: View {
     private let db = Firestore.firestore()
     private let assigneeColumns = [GridItem(.adaptive(minimum: 80), spacing: 4)]
     
-        /// Loads an existing drawing from disk into the canvas when editing.
     private func loadDrawing() {
         guard let path = card.drawingURL,
               let url = URL(string: path)
@@ -23,11 +22,9 @@ struct KanbanCardView: View {
         }
     }
     
-        /// Extracts the drawing, saves it as vector data in Documents, and closes the sheet.
     private func saveDrawing() {
         let drawing = canvas.drawing
         let data = drawing.dataRepresentation()
-            // Build a file URL in the app’s Documents directory
         let filename = "\(card.id).drawing"
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let fileURL = documents.appendingPathComponent(filename)
@@ -38,7 +35,7 @@ struct KanbanCardView: View {
                 showingDrawing = false
             }
         } catch {
-            print("🔴 File save error: \(error.localizedDescription)")
+            print("Save error: \(error.localizedDescription)")
         }
     }
     
@@ -80,7 +77,6 @@ struct KanbanCardView: View {
                 }
             }
             
-                // If a drawing URL exists, render and display the canvas drawing
             if let path = card.drawingURL,
                let url = URL(string: path),
                let data = try? Data(contentsOf: url),
@@ -93,13 +89,10 @@ struct KanbanCardView: View {
                     .frame(maxHeight: 200)
                     .contextMenu {
                         Button(role: .destructive) {
-                                // Delete the drawing file from disk
                             if let fileURL = URL(string: path) {
                                 try? FileManager.default.removeItem(at: fileURL)
                             }
-                                // Clear the canvas drawing so it doesn’t reappear
                             canvas.drawing = PKDrawing()
-                                // Remove the reference so the view updates
                             card.drawingURL = nil
                         } label: {
                             Label("Delete Drawing", systemImage: "trash")
@@ -113,7 +106,6 @@ struct KanbanCardView: View {
                     .frame(maxWidth: .infinity)
                     .foregroundColor(.gray)
             }
-                // Show assigned users
             if !card.assignees.isEmpty {
                 LazyVGrid(columns: assigneeColumns, alignment: .leading, spacing: 4) {
                     ForEach(card.assignees, id: \.self) { assignee in
@@ -138,7 +130,6 @@ struct KanbanCardView: View {
     }
 }
 
-    /// UIViewRepresentable wrapper for PencilKit
 struct DrawingCanvas: UIViewRepresentable {
     @Binding var canvas: PKCanvasView
     private let toolPicker = PKToolPicker()

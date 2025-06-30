@@ -79,7 +79,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         return true
     }
     
-        /// Show banners (and play sound) even when the app is active
     func userNotificationCenter(_ center: UNUserNotificationCenter,
                                 willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
@@ -107,10 +106,8 @@ struct WorkAroundApp: App {
         WindowGroup {
             Group {
                 if Auth.auth().currentUser != nil {
-                        // User is already signed in
-                    HomeView(logoNamespace: logoNamespace, showLoadingView: false)     // Replace with your app's main content view
+                    HomeView(logoNamespace: logoNamespace, showLoadingView: false)     
                 } else {
-                        // User is not signed in
                     AuthenticateView()
                 }
             }

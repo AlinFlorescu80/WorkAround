@@ -18,7 +18,6 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             List {
-                    // MARK: Header
                 VStack(spacing: 12) {
                     Text("Working Around")
                         .font(.title3.bold())
@@ -27,7 +26,6 @@ struct ProfileView: View {
                 .listRowInsets(EdgeInsets())
                 .padding(.vertical, 12)
                 
-                    // MARK: Preferences
                 Section("Preferences") {
                     HStack {
                         Label("Appearance", systemImage: "paintbrush")
@@ -48,7 +46,6 @@ struct ProfileView: View {
                     }
                 }
                 
-                    // MARK: About
                 Section("About") {
                     Button {
                         showShareSheet = true
@@ -70,7 +67,6 @@ struct ProfileView: View {
                     }
                 }
                 
-                    // MARK: Account
                 Section("Account") {
                     Button(role: .destructive) {
                         do {
@@ -103,8 +99,6 @@ struct ProfileView: View {
         }
     }
     
-        // MARK: Helpers
-        /// Applies the chosen appearance option to every window in every scene.
     private func applyAppearance() {
         let style: UIUserInterfaceStyle
         switch appearanceOption {
@@ -120,8 +114,6 @@ struct ProfileView: View {
         }
     }
     
-        /// Returns the appropriate URL for the app‑specific Notification settings if available,
-        /// otherwise falls back to the main settings page for this app.
     private var notificationSettingsURL: URL? {
         if #available(iOS 16.0, *) {
             return URL(string: UIApplication.openNotificationSettingsURLString)
@@ -134,7 +126,6 @@ struct ProfileView: View {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
 }
-    // MARK: Activity View (Share Sheet)
 private struct ActivityView: UIViewControllerRepresentable {
     var activityItems: [Any]
     var applicationActivities: [UIActivity] = []
@@ -147,7 +138,6 @@ private struct ActivityView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) { }
 }
 
-    // MARK: – Dummy Privacy‑Policy View
 private struct PrivacyPolicyView: View {
     @Environment(\.dismiss) private var dismiss
     

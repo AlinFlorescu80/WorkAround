@@ -47,7 +47,7 @@ struct AuthenticateView: View {
                         Spacer()
                         Text("Welcome to WorkAround!")
                             .font(.system(size: 40, weight: .heavy, design: .rounded))
-                            .multilineTextAlignment(.center) // optional, for clarity
+                            .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity, alignment: .center)
                         Spacer()
                         
@@ -116,11 +116,9 @@ struct AuthenticateView: View {
                         
                         
                         Button {
-                                // Validare fields
                             isEmailEmpty = email.isEmpty
                             isPasswordEmpty = password.isEmpty
                             guard !isEmailEmpty && !isPasswordEmpty else { return }
-                                // Validare email
                             let emailPattern = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
                             let emailPredicate = NSPredicate(format: "SELF MATCHES %@", emailPattern)
                             isEmailInvalid = !emailPredicate.evaluate(with: email)
@@ -197,19 +195,7 @@ struct AuthenticateView: View {
                                 .background(Color.white)
                                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
                         }
-                            //                    .buttonStyle(.bordered)
-                        
-                        
-                            //                    Button("Sign in with Google")
-                            //                    {
-                            //
-                            //                    }
-                            //                    .frame(width: 250, height: 50)
-                            //                    .foregroundColor(.blue)
-                            //
-                            //                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.blue, lineWidth: 2))
-                            //                    .padding()
-                            //
+                           
                         
                         
                         
@@ -260,9 +246,9 @@ struct AuthenticateView: View {
 }
 
 
-    #Preview {
-        AuthenticateView()
-    }
+//    #Preview {
+//        AuthenticateView()
+//    }
 
 
     //MARK: Google Sign-In

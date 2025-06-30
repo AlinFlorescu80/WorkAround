@@ -21,7 +21,6 @@ struct ChatView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(viewModel.messages) { msg in
                             VStack(spacing: 4) {
-                                    // Sender’s email aligned with the bubble
                                 HStack {
                                     if msg.sender == senderEmail {
                                         Spacer()
@@ -35,7 +34,6 @@ struct ChatView: View {
                                         Spacer()
                                     }
                                 }
-                                    // Message bubble aligned the same way
                                 HStack {
                                     if msg.sender == senderEmail {
                                         Spacer()
@@ -57,7 +55,6 @@ struct ChatView: View {
                     .animation(.easeInOut, value: viewModel.messages.count)
                 }
                 .onChange(of: viewModel.messages.count) { _ in
-                        // auto‑scroll to the latest message
                     if let lastID = viewModel.messages.last?.id {
                         withAnimation {
                             proxy.scrollTo(lastID, anchor: .bottom)

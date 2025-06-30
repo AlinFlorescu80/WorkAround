@@ -1,27 +1,20 @@
-    // =============================================================
-    //  KanbanBoardViewModel.swift — updated for AI task classification
-    // =============================================================
-
 import Foundation
 import Firebase
 import FirebaseAuth
 import FirebaseFirestore
-import CoreML   // ← new
+import CoreML
 import SwiftUI
 
 class KanbanBoardViewModel: ObservableObject {
     
-        // MARK: – Published state
     @Published var columns: [KanbanColumn] = []
-    @Published var predictions: [String: String] = [:]      // card-id → importance label
-    @Published var invitedUsers: [String] = []              // owner + invited
+    @Published var predictions: [String: String] = [:]
+    @Published var invitedUsers: [String] = []
     @Published var boardTitle: String = ""
     
-        // MARK: – Private members
     private let db = Firestore.firestore()
     let boardID: String
     
-        // MARK: – Core ML model
     private let classifier: TaskImportanceClassifier = {
         do {
             return try TaskImportanceClassifier(configuration: MLModelConfiguration())
@@ -30,7 +23,6 @@ class KanbanBoardViewModel: ObservableObject {
         }
     }()
     
-        // MARK: – Lifecycle
     init(boardID: String) {
         self.boardID = boardID
         fetchInvitedUsers()
@@ -38,7 +30,6 @@ class KanbanBoardViewModel: ObservableObject {
         fetchBoardTitle()
     }
     
-        // MARK: – Board metadata
     private func fetchBoardTitle() {
         db.collection("boards").document(boardID).getDocument { snapshot, error in
             if let data = snapshot?.data(),
@@ -50,7 +41,6 @@ class KanbanBoardViewModel: ObservableObject {
         }
     }
     
-        // MARK: – Column CRUD
     func fetchColumns() {
         db.collection("boards")
             .document(boardID)
@@ -68,7 +58,6 @@ class KanbanBoardViewModel: ObservableObject {
     
     func saveColumn(_ column: KanbanColumn) {
         var columnToSave = column
-            // Assign a Firestore ID if it doesn’t have one yet
         if columnToSave.firestoreId == nil {
             let newDocRef = db.collection("boards")
                 .document(boardID)
@@ -105,7 +94,6 @@ class KanbanBoardViewModel: ObservableObject {
             }
     }
     
-        // MARK: – Core ML helpers
     func classifyAllTasks() {
         DispatchQueue.global(qos: .userInitiated).async {
             var newPredictions: [String: String] = [:]
@@ -138,7 +126,6 @@ class KanbanBoardViewModel: ObservableObject {
         }
     }
     
-        // MARK: – Invited users
     private func fetchInvitedUsers() {
         db.collection("boards").document(boardID)
             .addSnapshotListener { snapshot, _ in
@@ -152,7 +139,6 @@ class KanbanBoardViewModel: ObservableObject {
             }
     }
     
-        // MARK: – Assignee helpers
     func addAssignee(_ userEmail: String, toCardID cardID: String) {
         for index in columns.indices {
             if let cardIndex = columns[index].cards.firstIndex(where: { $0.id == cardID }) {

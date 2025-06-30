@@ -80,7 +80,6 @@ struct KanbanBoardView: View {
                                                     }
                                                 }
                                             }
-                                                // Only show remove menu when there are assignees
                                             if !card.assignees.isEmpty {
                                                 Menu("Remove assignee") {
                                                     ForEach(card.assignees, id: \.self) { user in
@@ -140,7 +139,6 @@ struct KanbanBoardView: View {
                             }
                         }
                     }
-                        //  Add‑column button
                     Button(action:
                             {
                         let nextOrder = (viewModel.columns.map(\.order).max() ?? -1) + 1
@@ -166,7 +164,6 @@ struct KanbanBoardView: View {
                 .padding()
             }
         }
-            //  Sheets & life‑cycle hooks remain unchanged
         .sheet(isPresented: $showingInviteSheet) {
             InviteUserView(boardID: viewModel.boardID)
         }
